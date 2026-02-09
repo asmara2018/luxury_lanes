@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Luxury Lanes - Dashboard</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial, sans-serif;
+}
+
+body{
+  background:#CFFDFF;
+  min-height:100vh;
+}
+
+/* HEADER */
+
+header{
+  background:white;
+  padding:20px 30px;
+  display:flex;
+  justify-content:space-between;
+  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* SIDEBAR */
+
+.sidebar{
+  width:220px;
+  background:white;
+  padding:20px;
+  position:fixed;
+  top:70px;
+  bottom:0;
+}
+
+.sidebar button{
+  width:100%;
+  padding:12px;
+  margin-bottom:10px;
+  border:none;
+  border-radius:8px;
+  background:#2c7be5;
+  color:white;
+  cursor:pointer;
+}
+
+/* MAIN */
+
+.main{
+  margin-left:260px;
+  padding:40px;
+}
+
+/* WHITE CARD STYLE (LIKE LOGIN) */
+
+.card{
+  width:500px;
+  background:white;
+  padding:2rem;
+  border-radius:14px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+}
+
+input, select, textarea{
+  width:100%;
+  padding:10px;
+  margin-top:6px;
+  margin-bottom:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
+}
+
+button.action{
+  padding:12px;
+  background:#2c7be5;
+  color:white;
+  border:none;
+  border-radius:10px;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>Luxury Lanes Maintenance</h2>
+<button onclick="logout()">Logout</button>
+</header>
+
+<div class="sidebar">
+<button onclick="show('report')">Report Fault</button>
+<button onclick="show('notifications')">Notifications</button>
+<button id="assignBtn" onclick="show('assign')">Assign Job</button>
+</div>
+
+<div class="main">
+
+<!-- REPORT FAULT -->
+
+<div id="report" class="card">
+<h3>Report Fault</h3>
+
+<label>Room</label>
+<input id="room">
+
+<label>Issue</label>
+<input id="issue">
+
+<label>Description</label>
+<textarea id="description"></textarea>
+
+<label>Priority</label>
+<select id="priority">
+<option>High</option>
+<option>Medium</option>
+<option>Low</option>
+</select>
+
+<button class="action" onclick="submitFault()">Submit</button>
+</div>
+
+<!-- ASSIGN -->
+
+<div id="assign" class="card" style="display:none;">
+<h3>Assign Job</h3>
+
+<label>Request ID</label>
+<input id="requestId">
+
+<label>Subcontractor Name</label>
+<input id="subName">
+
+<label>Email</label>
+<input id="subEmail">
+
+<button class="action" onclick="assignJob()">Assign</button>
+</div>
+
+<!-- NOTIFICATIONS -->
+
+<div id="notifications" class="card" style="display:none;">
+<h3>Notifications</h3>
+<div id="notifList"></div>
+</div>
+
+</div>
+
+<script>
+
+/* Guest cannot assign */
+
+let role = localStorage.getItem("role") || "Guest";
+if(role==="Guest"){
+document.getElementById("assignBtn").style.display="none";
+}
+
+function show(id){
+document.getElementById("report").style.display="none";
+document.getElementById("assign").style.display="none";
+document.getElementById("notifications").style.display="none";
+document.getElementById(id).style.display="block";
+}
+
+function submitFault(){
+
+fetch("http://127.0.0.1:5000/report-fault",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+room:room.value,
+issue:issue.value,
+description:description.value,
+priority:priority.value
+})
+})
+.then(()=>alert("Fault reported"));
+}
+
+function assignJob(){
+
+fetch("http://127.0.0.1:5000/assign-job",{
+method:"POST",
+headers:{"Content-Type":"application/json"},
+body:JSON.stringify({
+request_id:requestId.value,
+name:subName.value,
+email:subEmail.value
+})
+})
+.then(()=>alert("Assigned"));
+}
+
+fetch("http://127.0.0.1:5000/notifications")
+.then(r=>r.json())
+.then(data=>{
+let html="";
+data.forEach(n=> html+="<p>"+n.type+"</p>");
+notifList.innerHTML=html;
+});
+
+function logout(){
+window.location.href="login.html";
+}
+
+</script>
+
+</body>
+</html>
+

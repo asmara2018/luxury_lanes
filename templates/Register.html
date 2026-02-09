@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Luxury Lanes - Register</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial, sans-serif;
+}
+
+body{
+  background:#CFFDFF;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+.register_box{
+  width:480px;
+  background:white;
+  padding:2.5rem;
+  border-radius:16px;
+  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+  display:grid;
+  gap:1rem;
+}
+
+h1,p{
+  text-align:center;
+}
+
+p{
+  color:#666;
+}
+
+label{
+  font-weight:bold;
+}
+
+input, select{
+  padding:12px;
+  border-radius:10px;
+  border:1px solid #ccc;
+}
+
+button{
+  padding:12px;
+  background:#2c7be5;
+  color:white;
+  border:none;
+  border-radius:10px;
+  cursor:pointer;
+}
+
+.back-link{
+  text-align:center;
+  font-size:14px;
+}
+
+.back-link a{
+  color:#2c7be5;
+  text-decoration:none;
+}
+</style>
+</head>
+
+<body>
+
+<div class="register_box">
+
+<h1>Luxury Lanes</h1>
+<p>Create an account</p>
+
+<label>Full Name</label>
+<input type="text" required>
+
+<label>Email</label>
+<input type="email" required>
+
+<label>Password</label>
+<input type="password" required>
+
+<label>Role</label>
+<select>
+  <option value="">Select role</option>
+  <option>Guest</option>
+  <option>Staff</option>
+  <option>Manager</option>
+  <option>Subcontractor</option>
+</select>
+
+<button onclick="goLogin()">Create Account</button>
+
+<div class="back-link">
+Already have an account? <a href="login.html">Back to login</a>
+</div>
+
+</div>
+
+<script>
+function goLogin(){
+
+  let fullName = document.querySelector("input[type='text']").value;
+  let email = document.querySelector("input[type='email']").value;
+  let password = document.querySelector("input[type='password']").value;
+  let role = document.querySelector("select").value;
+
+  if(fullName === "" || email === "" || password === "" || role === ""){
+    alert("Please fill all fields");
+    return;
+  }
+
+  let parts = fullName.trim().split(" ");
+  let first = parts[0];
+  let last = parts.slice(1).join(" ") || "User";
+
+  fetch("http://127.0.0.1:5000/register", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({
+      first_name: first,
+      surname: last,
+      email: email,
+      password: password,
+      role: role
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if(data.success){
+      alert("Account created successfully!");
+      window.location.href = "Login.html";
+    }else{
+      alert(data.message || "Could not create account");
+    }
+  })
+  .catch(() => {
+    alert("Server not running - account not saved");
+  });
+
+}
+</script>
+
+
+
+
+</body>
+</html>
+
