@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Report a Fault - Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, monospace;
+}
+
+body {
+    background-color: #CFFDFF;
+    min-height: 100vh;
+    display: flex;
+}
+
+.sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 3px 0 15px rgba(0,0,0,0.08);
+}
+
+.sidebar-brand {
+    text-align: center;
+    padding: 28px 20px;
+    border-bottom: 1px solid #e8f4f4;
+}
+
+.sidebar-brand h2 {
+    font-family: Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
+}
+
+.sidebar-brand p {
+    font-size: 12px;
+    color: #888;
+    margin-top: 4px;
+    text-transform: capitalize;
+}
+
+.nav-links {
+    list-style: none;
+    flex: 1;
+}
+
+.nav-links li a {
+    display: block;
+    padding: 13px 24px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    border-left: 3px solid transparent;
+}
+
+.nav-links li a:hover,
+.nav-links li a.active {
+    background: #f0faff;
+    color: #3578e5;
+    border-left: 3px solid #3578e5;
+}
+
+.sidebar-footer {
+    padding: 18px;
+    border-top: 1px solid #e8f4f4;
+}
+
+.btn-logout {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e05252;
+    background: white;
+    color: #e05252;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-logout:hover {
+    background: #e05252;
+    color: white;
+}
+
+.main {
+    flex: 1;
+    padding: 35px 40px;
+}
+
+.form-card {
+    background: white;
+    border-radius: 14px;
+    padding: 32px 36px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+    max-width: 620px;
+}
+
+.form-card h2 {
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 24px;
+    padding-bottom: 12px;
+    border-bottom: 2px solid #f0f0f0;
+    font-family: Georgia, serif;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 7px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px 13px;
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    font-size: 14px;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.btn-submit {
+    width: 100%;
+    padding: 13px;
+    background: #3578e5;
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.btn-submit:hover {
+    background: #2860c5;
+}
+</style>
+</head>
+
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <h2>Luxury Lanes</h2>
+        <p id="sidebarRole">Loading...</p>
+    </div>
+
+    <ul class="nav-links" id="navLinks"></ul>
+
+    <div class="sidebar-footer">
+        <button class="btn-logout" onclick="logout()">Log Out</button>
+    </div>
+</aside>
+
+<main class="main">
+
+<h1 style="margin-bottom:20px; font-family:Georgia,serif;">Report a Fault</h1>
+
+<div class="form-card">
+<h2>Fault Details</h2>
+
+<div class="form-group">
+<label>Room Number</label>
+<input type="text" id="roomSelect">
+</div>
+
+<div class="form-group">
+<label>Issue Title</label>
+<input type="text" id="issueTitle">
+</div>
+
+<div class="form-group">
+<label>Description</label>
+<textarea id="issueDesc"></textarea>
+</div>
+
+<div class="form-group">
+<label>Priority Level</label>
+<select id="prioritySelect">
+<option value="">Select priority...</option>
+<option value="High">High</option>
+<option value="Medium">Medium</option>
+<option value="Low">Low</option>
+</select>
+</div>
+
+<button class="btn-submit" onclick="submitFault()">Submit Fault Report</button>
+
+</div>
+</main>
+
+<script>
+
+window.onload = function () {
+    fetch('/api/me', { credentials: 'include' })
+        .then(res => {
+            if (res.status === 401) {
+                window.location.href = "Login.html";
+                return null;
+            }
+            return res.json();
+        })
+        .then(user => {
+            if (!user) return;
+            document.getElementById("sidebarRole").innerText = user.role;
+            buildNav(user.role);
+        });
+};
+
+function buildNav(role) {
+
+    const navMap = {
+        Guest: [
+            { label: "Dashboard", href: "Dashboard.html" },
+            { label: "Report a Fault", href: "Report_Fault.html", active: true },
+            { label: "My Requests", href: "View_Requests.html" }
+        ],
+        Manager: [
+            { label: "Dashboard", href: "Dashboard.html" },
+            { label: "Report a Fault", href: "Report_Fault.html", active: true },
+            { label: "Manage Requests", href: "Manage_Requests.html" },
+            { label: "Analytics", href: "Analytics.html" }
+        ],
+        Staff: [
+            { label: "Dashboard", href: "Dashboard.html" },
+            { label: "Update Status", href: "Manage_Requests.html" }
+        ],
+        Subcontractor: [
+            { label: "Dashboard", href: "Dashboard.html" },
+            { label: "Update Status", href: "Manage_Requests.html" }
+        ]
+    };
+
+    const links = navMap[role] || navMap["Guest"];
+
+    document.getElementById("navLinks").innerHTML =
+        links.map(l =>
+            `<li><a href="${l.href}" class="${l.active ? "active" : ""}">${l.label}</a></li>`
+        ).join("");
+}
+
+function submitFault() {
+
+    var room     = document.getElementById('roomSelect').value.trim();
+    var title    = document.getElementById('issueTitle').value.trim();
+    var desc     = document.getElementById('issueDesc').value.trim();
+    var priority = document.getElementById('prioritySelect').value;
+
+    if (!room || !title || !desc || !priority) {
+        alert("Fill all fields");
+        return;
+    }
+
+    fetch('/api/requests', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            room: room,
+            title: title,
+            description: desc,
+            priority: priority
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            alert("Fault submitted successfully. Ref #" + data.request_id);
+            window.location.href = "Dashboard.html";
+        } else {
+            alert(data.message);
+        }
+    });
+}
+
+function logout() {
+    fetch('/api/logout', { method: 'POST' })
+        .then(() => window.location.href = "Login.html");
+}
+
+</script>
+
+</body>
+</html>

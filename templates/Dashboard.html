@@ -2,85 +2,171 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Luxury Lanes - Dashboard</title>
+<title>Dashboard – Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <style>
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:Arial, sans-serif;
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Arial, monospace;
 }
 
-body{
-  background:#CFFDFF;
-  min-height:100vh;
+body {
+    background-color: #CFFDFF;
+    min-height: 100vh;
+    display: flex;
 }
 
-/* HEADER */
-
-header{
-  background:white;
-  padding:20px 30px;
-  display:flex;
-  justify-content:space-between;
-  box-shadow:0 2px 8px rgba(0,0,0,0.1);
+.sidebar {
+    width: 220px;
+    min-height: 100vh;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 3px 0 15px rgba(0,0,0,0.08);
 }
 
-/* SIDEBAR */
-
-.sidebar{
-  width:220px;
-  background:white;
-  padding:20px;
-  position:fixed;
-  top:70px;
-  bottom:0;
+.sidebar-brand {
+    text-align: center;
+    padding: 28px 20px;
+    border-bottom: 1px solid #e8f4f4;
 }
 
-.sidebar button{
-  width:100%;
-  padding:12px;
-  margin-bottom:10px;
-  border:none;
-  border-radius:8px;
-  background:#2c7be5;
-  color:white;
-  cursor:pointer;
+.sidebar-brand h2 {
+    font-family: Georgia, serif;
+    font-size: 20px;
+    font-weight: 700;
 }
 
-/* MAIN */
-
-.main{
-  margin-left:260px;
-  padding:40px;
+.nav-links {
+    list-style: none;
+    flex: 1;
 }
 
-/* WHITE CARD STYLE (LIKE LOGIN) */
-
-.card{
-  width:500px;
-  background:white;
-  padding:2rem;
-  border-radius:14px;
-  box-shadow:0 10px 25px rgba(0,0,0,0.08);
+.nav-links li a {
+    display: block;
+    padding: 13px 24px;
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+    color: #555;
+    border-left: 3px solid transparent;
 }
 
-input, select, textarea{
-  width:100%;
-  padding:10px;
-  margin-top:6px;
-  margin-bottom:12px;
-  border-radius:10px;
-  border:1px solid #ccc;
+.nav-links li a:hover,
+.nav-links li a.active {
+    background: #f0faff;
+    color: #3578e5;
+    border-left: 3px solid #3578e5;
 }
 
-button.action{
-  padding:12px;
-  background:#2c7be5;
-  color:white;
-  border:none;
-  border-radius:10px;
+.sidebar-footer {
+    padding: 18px;
+    border-top: 1px solid #e8f4f4;
+}
+
+.btn-logout {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e05252;
+    background: white;
+    color: #e05252;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-logout:hover {
+    background: #e05252;
+    color: white;
+}
+
+.main {
+    flex: 1;
+    padding: 35px 40px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 14px;
+    padding: 22px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+}
+
+.stat-card.total  { border-left: 4px solid #3578e5; }
+.stat-card.high   { border-left: 4px solid #e05252; }
+.stat-card.medium { border-left: 4px solid #f0a500; }
+.stat-card.low    { border-left: 4px solid #27ae60; }
+
+.stat-card .value {
+    font-size: 32px;
+    font-weight: 700;
+    margin-top: 6px;
+}
+
+.section-card {
+    background: white;
+    border-radius: 14px;
+    padding: 26px;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.07);
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.badge.high {
+    background: #fde8e8;
+    color: #c0392b;
+}
+
+.badge.medium {
+    background: #fef3e0;
+    color: #d68910;
+}
+
+.badge.low {
+    background: #e6f9f0;
+    color: #1e8449;
+}
+
+.status-badge.reported {
+    background: #eef2ff;
+    color: #3578e5;
+}
+
+.status-badge.in-progress {
+    background: #fff8e1;
+    color: #f0a500;
+}
+
+.status-badge.completed {
+    background: #e6f9f0;
+    color: #1e8449;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 12px;
+    border-bottom: 1px solid #eee;
 }
 
 </style>
@@ -88,128 +174,85 @@ button.action{
 
 <body>
 
-<header>
-<h2>Luxury Lanes Maintenance</h2>
-<button onclick="logout()">Logout</button>
-</header>
+<aside class="sidebar">
 
-<div class="sidebar">
-<button onclick="show('report')">Report Fault</button>
-<button onclick="show('notifications')">Notifications</button>
-<button id="assignBtn" onclick="show('assign')">Assign Job</button>
-</div>
+    <div class="sidebar-brand">
+        <h2>Luxury Lanes</h2>
+        <p>Manager</p>
+    </div>
 
-<div class="main">
+    <ul class="nav-links">
+        <li><a href="Dashboard.html" class="active">Dashboard</a></li>
+        <li><a href="Report Fault.html">Report a Fault</a></li> <!-- FIXED -->
+        <li><a href="ManageRequests.html">Manage Requests</a></li>
+        <li><a href="ManageRooms.html">Assign a Job</a></li>
+        <li><a href="Analytics.html">Analytics</a></li>
+        <li><a href="Feedback.html">Feedback</a></li>
+    </ul>
 
-<!-- REPORT FAULT -->
+    <div class="sidebar-footer">
+        <button class="btn-logout">Log Out</button>
+    </div>
 
-<div id="report" class="card">
-<h3>Report Fault</h3>
+</aside>
 
-<label>Room</label>
-<input id="room">
+<main class="main">
 
-<label>Issue</label>
-<input id="issue">
+<h1 style="margin-bottom:20px;">Dashboard</h1>
 
-<label>Description</label>
-<textarea id="description"></textarea>
+<div class="stats-grid">
 
-<label>Priority</label>
-<select id="priority">
-<option>High</option>
-<option>Medium</option>
-<option>Low</option>
-</select>
+    <div class="stat-card total">
+        <div>Total Requests</div>
+        <div class="value">0</div>
+    </div>
 
-<button class="action" onclick="submitFault()">Submit</button>
-</div>
+    <div class="stat-card high">
+        <div>High Priority</div>
+        <div class="value">0</div>
+    </div>
 
-<!-- ASSIGN -->
+    <div class="stat-card medium">
+        <div>Medium Priority</div>
+        <div class="value">0</div>
+    </div>
 
-<div id="assign" class="card" style="display:none;">
-<h3>Assign Job</h3>
-
-<label>Request ID</label>
-<input id="requestId">
-
-<label>Subcontractor Name</label>
-<input id="subName">
-
-<label>Email</label>
-<input id="subEmail">
-
-<button class="action" onclick="assignJob()">Assign</button>
-</div>
-
-<!-- NOTIFICATIONS -->
-
-<div id="notifications" class="card" style="display:none;">
-<h3>Notifications</h3>
-<div id="notifList"></div>
-</div>
+    <div class="stat-card low">
+        <div>Low Priority</div>
+        <div class="value">0</div>
+    </div>
 
 </div>
 
-<script>
+<div class="section-card">
 
-/* Guest cannot assign */
+<h2>Maintenance Requests</h2>
 
-let role = localStorage.getItem("role") || "Guest";
-if(role==="Guest"){
-document.getElementById("assignBtn").style.display="none";
-}
+<br>
 
-function show(id){
-document.getElementById("report").style.display="none";
-document.getElementById("assign").style.display="none";
-document.getElementById("notifications").style.display="none";
-document.getElementById(id).style.display="block";
-}
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Room</th>
+<th>Issue</th>
+<th>Priority</th>
+<th>Status</th>
+<th>Date</th>
+</tr>
+</thead>
 
-function submitFault(){
+<tbody id="requestsTableBody">
+<tr>
+<td colspan="6" style="text-align:center;">No maintenance requests found</td>
+</tr>
+</tbody>
 
-fetch("http://127.0.0.1:5000/report-fault",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-room:room.value,
-issue:issue.value,
-description:description.value,
-priority:priority.value
-})
-})
-.then(()=>alert("Fault reported"));
-}
+</table>
 
-function assignJob(){
+</div>
 
-fetch("http://127.0.0.1:5000/assign-job",{
-method:"POST",
-headers:{"Content-Type":"application/json"},
-body:JSON.stringify({
-request_id:requestId.value,
-name:subName.value,
-email:subEmail.value
-})
-})
-.then(()=>alert("Assigned"));
-}
-
-fetch("http://127.0.0.1:5000/notifications")
-.then(r=>r.json())
-.then(data=>{
-let html="";
-data.forEach(n=> html+="<p>"+n.type+"</p>");
-notifList.innerHTML=html;
-});
-
-function logout(){
-window.location.href="login.html";
-}
-
-</script>
+</main>
 
 </body>
 </html>
-

@@ -1,303 +1,714 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, session
 from flask_cors import CORS
 import sqlite3
-import os
+import hashlib
+import secrets
 
 app = Flask(__name__)
-CORS(app)  # allow frontend to call backend
+app.secret_key = "luxury_lanes_secret_2024"
+CORS(app, supports_credentials=True, origins=["null", "http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5000", "http://localhost:5000"])
 
-# --- ALWAYS use the same DB file (no more .db.db mistakes) ---
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DB_PATH = os.path.join(BASE_DIR, "luxury_lanes.db")
+DB_PATH = "luxury_lanes.db"
+
 
 def connect_db():
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
-# --- Create tables if they don't exist (stops "no such table" errors) ---
+
+def hash_password(password):
+    salt = secrets.token_hex(16)
+    hashed = hashlib.sha256((password + salt).encode()).hexdigest()
+    return hashed + ":" + salt
+
+
+def check_password(password, stored):
+    parts = stored.split(":")
+    if len(parts) != 2:
+        return stored == password
+    hashed = hashlib.sha256((password + parts[1]).encode()).hexdigest()
+    return hashed == parts[0]
+
+
+def notify(user_id, request_id, message, ntype="Update"):
+    conn = connect_db()
+    conn.execute(
+        "INSERT INTO Notifications(user_id, request_id, message, type) VALUES(?,?,?,?)",
+        (user_id, request_id, message, ntype)
+    )
+    conn.commit()
+    conn.close()
+
+
+def audit(user_id, action, details=""):
+    conn = connect_db()
+    conn.execute(
+        "INSERT INTO AuditLog(user_id, action, details) VALUES(?,?,?)",
+        (user_id, action, details)
+    )
+    conn.commit()
+    conn.close()
+
+
 def init_db():
     conn = connect_db()
     c = conn.cursor()
 
-    c.execute("PRAGMA foreign_keys = ON;")
-
     c.execute("""
     CREATE TABLE IF NOT EXISTS Users (
-        user_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        first_name TEXT NOT NULL,
-        surname TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        phone TEXT,
-        role TEXT CHECK(role IN ('Guest','Staff','Manager','Subcontractor')) NOT NULL,
-        password_hash TEXT NOT NULL,
-        date_registered DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status TEXT DEFAULT 'Active'
-    );
+        user_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        first_name    TEXT NOT NULL,
+        surname       TEXT NOT NULL,
+        email         TEXT UNIQUE NOT NULL,
+        role          TEXT NOT NULL,
+        password_hash TEXT NOT NULL
+    )
     """)
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS Rooms (
-        room_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id     INTEGER PRIMARY KEY AUTOINCREMENT,
         room_number TEXT UNIQUE NOT NULL,
-        floor INTEGER,
-        status TEXT DEFAULT 'Available'
-    );
+        floor       INTEGER DEFAULT 1,
+        status      TEXT DEFAULT 'Available'
+    )
     """)
 
     c.execute("""
-    CREATE TABLE IF NOT EXISTS MaintenanceRequests (
-        request_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        room_id INTEGER NOT NULL,
-        customer_id INTEGER NOT NULL,
-        title TEXT NOT NULL,
+    CREATE TABLE IF NOT EXISTS requests (
+        id          INTEGER PRIMARY KEY AUTOINCREMENT,
+        room        TEXT NOT NULL,
+        title       TEXT NOT NULL,
         description TEXT NOT NULL,
-        priority TEXT CHECK(priority IN ('High','Medium','Low')) NOT NULL,
+        priority    TEXT NOT NULL,
+        status      TEXT DEFAULT 'Reported',
+        user_id     INTEGER,
+        assigned_to INTEGER,
         report_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-        status TEXT CHECK(status IN ('Reported','In Progress','Completed')) DEFAULT 'Reported',
-        photo_url TEXT,
-        FOREIGN KEY(room_id) REFERENCES Rooms(room_id),
-        FOREIGN KEY(customer_id) REFERENCES Users(user_id)
-    );
+        FOREIGN KEY(user_id)     REFERENCES Users(user_id),
+        FOREIGN KEY(assigned_to) REFERENCES Users(user_id)
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS Feedback (
+        feedback_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        request_id  INTEGER,
+        user_id     INTEGER,
+        rating      INTEGER CHECK(rating BETWEEN 1 AND 5),
+        comments    TEXT,
+        created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(request_id) REFERENCES requests(id),
+        FOREIGN KEY(user_id)    REFERENCES Users(user_id)
+    )
     """)
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS Notifications (
-        notice_id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER NOT NULL,
-        request_id INTEGER,
-        sent_time DATETIME DEFAULT CURRENT_TIMESTAMP,
-        delivery_method TEXT DEFAULT 'System',
-        type TEXT,
-        FOREIGN KEY(user_id) REFERENCES Users(user_id)
-    );
+        notification_id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id         INTEGER,
+        request_id      INTEGER,
+        message         TEXT NOT NULL,
+        type            TEXT DEFAULT 'Update',
+        is_read         INTEGER DEFAULT 0,
+        created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id)    REFERENCES Users(user_id),
+        FOREIGN KEY(request_id) REFERENCES requests(id)
+    )
     """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS PerformanceAnalytics (
+        analytics_id       INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id            INTEGER UNIQUE,
+        total_requests     INTEGER DEFAULT 0,
+        completed_requests INTEGER DEFAULT 0,
+        avg_completion_time REAL DEFAULT 0,
+        FOREIGN KEY(user_id) REFERENCES Users(user_id)
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS RoomStatus (
+        room_status_id      INTEGER PRIMARY KEY AUTOINCREMENT,
+        room_id             INTEGER UNIQUE,
+        total_issues        INTEGER DEFAULT 0,
+        last_reported_issue DATETIME,
+        FOREIGN KEY(room_id) REFERENCES Rooms(room_id)
+    )
+    """)
+
+    c.execute("""
+    CREATE TABLE IF NOT EXISTS AuditLog (
+        log_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id       INTEGER,
+        action        TEXT NOT NULL,
+        details       TEXT,
+        time_recorded DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES Users(user_id)
+    )
+    """)
+
+    existing = conn.execute("SELECT COUNT(*) FROM Rooms").fetchone()[0]
+    if existing == 0:
+        rooms = []
+        for i in range(1, 31):
+            floor = ((i - 1) // 10) + 1
+            rooms.append((str(100 + i), floor))
+        c.executemany("INSERT INTO Rooms(room_number, floor) VALUES(?,?)", rooms)
 
     conn.commit()
     conn.close()
+
 
 init_db()
 
-# ---------- OPTIONAL: serve your html files (avoids file:// issues) ----------
-@app.route("/")
-def home():
-    return send_from_directory(BASE_DIR, "Login.html")
 
-@app.route("/Register.html")
-def register_page():
-    return send_from_directory(BASE_DIR, "Register.html")
-
-@app.route("/Dashboard.html")
-def dash_page():
-    return send_from_directory(BASE_DIR, "Dashboard.html")
-
-
-# ---------- REGISTER ----------
 @app.route("/register", methods=["POST"])
 def register():
-    data = request.json
+    d          = request.json
+    first_name = d.get("first_name", "").strip()
+    surname    = d.get("surname", "").strip()
+    email      = d.get("email", "").strip().lower()
+    role       = d.get("role", "").strip()
+    password   = d.get("password", "")
 
-    first_name = (data.get("first_name") or "").strip()
-    surname = (data.get("surname") or "").strip()
-    email = (data.get("email") or "").strip().lower()
-    password = (data.get("password") or "").strip()
-    role = (data.get("role") or "").strip()
+    if not all([first_name, surname, email, role, password]):
+        return jsonify({"success": False, "message": "All fields are required."}), 400
 
-    if not first_name or not surname or not email or not password or not role:
-        return jsonify({"success": False, "message": "Missing fields"}), 400
+    if role not in ("Guest", "Staff", "Manager", "Subcontractor"):
+        return jsonify({"success": False, "message": "Invalid role selected."}), 400
 
     conn = connect_db()
-    c = conn.cursor()
-
     try:
-        c.execute("""
-        INSERT INTO Users(first_name, surname, email, role, password_hash)
-        VALUES (?,?,?,?,?)
-        """, (first_name, surname, email, role, password))
+        conn.execute(
+            "INSERT INTO Users(first_name, surname, email, role, password_hash) VALUES(?,?,?,?,?)",
+            (first_name, surname, email, role, hash_password(password))
+        )
         conn.commit()
-
-        # find user id
-        c.execute("SELECT user_id FROM Users WHERE email=?", (email,))
-        user_id = c.fetchone()["user_id"]
-
-        conn.close()
-        return jsonify({"success": True, "user_id": user_id})
-
+        return jsonify({"success": True, "message": "Account created successfully."})
     except sqlite3.IntegrityError:
+        return jsonify({"success": False, "message": "An account with that email already exists."}), 409
+    finally:
         conn.close()
-        return jsonify({"success": False, "message": "Email already exists"}), 409
 
 
-# ---------- LOGIN ----------
 @app.route("/login", methods=["POST"])
 def login():
-    data = request.json
-    email = (data.get("email") or "").strip().lower()
-    password = (data.get("password") or "").strip()
+    d        = request.json
+    email    = d.get("email", "").strip().lower()
+    password = d.get("password", "")
+
+    if not email or not password:
+        return jsonify({"success": False, "message": "Email and password are required."}), 400
 
     conn = connect_db()
-    c = conn.cursor()
-
-    c.execute("""
-    SELECT user_id, first_name, surname, role
-    FROM Users
-    WHERE email=? AND password_hash=?
-    """, (email, password))
-
-    user = c.fetchone()
+    user = conn.execute("SELECT * FROM Users WHERE email=?", (email,)).fetchone()
     conn.close()
 
-    if user:
-        return jsonify({
-            "success": True,
-            "user_id": user["user_id"],
-            "name": f"{user['first_name']} {user['surname']}",
-            "role": user["role"]
-        })
-    else:
-        return jsonify({"success": False})
+    if not user or not check_password(password, user["password_hash"]):
+        return jsonify({"success": False, "message": "Incorrect email or password."}), 401
 
-
-# ---------- REPORT FAULT ----------
-@app.route("/report-fault", methods=["POST"])
-def report_fault():
-    data = request.json
-
-    room = (data.get("room") or "").strip()
-    issue = (data.get("issue") or "").strip()
-    description = (data.get("description") or "").strip()
-    priority = (data.get("priority") or "").strip()
-    user_id = data.get("user_id")
-
-    if not room or not issue or not description or not priority or not user_id:
-        return jsonify({"success": False, "message": "Missing fields"}), 400
-
-    conn = connect_db()
-    c = conn.cursor()
-
-    # room exists?
-    c.execute("INSERT OR IGNORE INTO Rooms(room_number) VALUES (?)", (room,))
-    c.execute("SELECT room_id FROM Rooms WHERE room_number=?", (room,))
-    room_id = c.fetchone()["room_id"]
-
-    # insert request
-    c.execute("""
-    INSERT INTO MaintenanceRequests(room_id, customer_id, title, description, priority)
-    VALUES (?,?,?,?,?)
-    """, (room_id, user_id, issue, description, priority))
-
-    request_id = c.lastrowid
-
-    # add a notification to the user (confirmation)
-    c.execute("""
-    INSERT INTO Notifications(user_id, request_id, type)
-    VALUES (?,?,?)
-    """, (user_id, request_id, "Fault logged successfully"))
-
-    conn.commit()
-    conn.close()
-
-    return jsonify({"success": True})
-
-
-# ---------- DASHBOARD DATA ----------
-@app.route("/dashboard-data")
-def dashboard_data():
-    user_id = request.args.get("user_id", type=int)
-    role = request.args.get("role", type=str)
-
-    conn = connect_db()
-    c = conn.cursor()
-
-    # Guest sees only their own requests; others see everything (simple rule)
-    if role == "Guest" and user_id:
-        c.execute("SELECT COUNT(*) AS n FROM MaintenanceRequests WHERE customer_id=?", (user_id,))
-        total = c.fetchone()["n"]
-
-        c.execute("SELECT COUNT(*) AS n FROM MaintenanceRequests WHERE customer_id=? AND status!='Completed'", (user_id,))
-        open_faults = c.fetchone()["n"]
-
-        c.execute("SELECT COUNT(*) AS n FROM MaintenanceRequests WHERE customer_id=? AND status='Completed'", (user_id,))
-        completed = c.fetchone()["n"]
-
-        c.execute("""
-        SELECT Rooms.room_number, title, priority, status
-        FROM MaintenanceRequests
-        JOIN Rooms ON MaintenanceRequests.room_id = Rooms.room_id
-        WHERE customer_id=?
-        ORDER BY report_time DESC
-        LIMIT 6
-        """, (user_id,))
-    else:
-        c.execute("SELECT COUNT(*) AS n FROM MaintenanceRequests")
-        total = c.fetchone()["n"]
-
-        c.execute("SELECT COUNT(*) AS n FROM MaintenanceRequests WHERE status!='Completed'")
-        open_faults = c.fetchone()["n"]
-
-        c.execute("SELECT COUNT(*) AS n FROM MaintenanceRequests WHERE status='Completed'")
-        completed = c.fetchone()["n"]
-
-        c.execute("""
-        SELECT Rooms.room_number, title, priority, status
-        FROM MaintenanceRequests
-        JOIN Rooms ON MaintenanceRequests.room_id = Rooms.room_id
-        ORDER BY report_time DESC
-        LIMIT 6
-        """)
-
-    recent_rows = c.fetchall()
-    recent = []
-    for r in recent_rows:
-        recent.append({
-            "room": r["room_number"],
-            "issue": r["title"],
-            "priority": r["priority"],
-            "status": r["status"]
-        })
-
-    conn.close()
+    session["user_id"] = user["user_id"]
+    session["role"]    = user["role"]
+    audit(user["user_id"], "LOGIN", f"{email} logged in")
 
     return jsonify({
-        "db_used": DB_PATH,
-        "total": total,
-        "open": open_faults,
-        "completed": completed,
-        "recent": recent
+        "success":    True,
+        "user_id":    user["user_id"],
+        "first_name": user["first_name"],
+        "surname":    user["surname"],
+        "email":      user["email"],
+        "role":       user["role"]
     })
 
 
-# ---------- NOTIFICATIONS ----------
-@app.route("/notifications")
-def notifications():
-    user_id = request.args.get("user_id", type=int)
+@app.route("/logout", methods=["POST"])
+def logout():
+    uid = session.get("user_id")
+    session.clear()
+    if uid:
+        audit(uid, "LOGOUT")
+    return jsonify({"success": True})
+
+
+@app.route("/me", methods=["GET"])
+def me():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    user = conn.execute(
+        "SELECT user_id, first_name, surname, email, role FROM Users WHERE user_id=?", (uid,)
+    ).fetchone()
+    conn.close()
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    return jsonify(dict(user))
+
+
+@app.route("/rooms", methods=["GET"])
+def get_rooms():
+    conn  = connect_db()
+    rooms = conn.execute("SELECT * FROM Rooms ORDER BY CAST(room_number AS INTEGER)").fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rooms])
+
+
+@app.route("/rooms/stats", methods=["GET"])
+def rooms_stats():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+    rows = conn.execute("""
+        SELECT r.room_id, r.room_number, r.floor, r.status,
+               COALESCE(rs.total_issues, 0) AS total_issues,
+               rs.last_reported_issue
+        FROM Rooms r
+        LEFT JOIN RoomStatus rs ON rs.room_id = r.room_id
+        ORDER BY CAST(r.room_number AS INTEGER)
+    """).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/rooms", methods=["POST"])
+def add_room():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+    d  = request.json
+    rn = d.get("room_number", "").strip()
+    fl = d.get("floor", 1)
+    if not rn:
+        conn.close()
+        return jsonify({"error": "Room number is required"}), 400
+    try:
+        conn.execute("INSERT INTO Rooms(room_number, floor) VALUES(?,?)", (rn, fl))
+        conn.commit()
+        return jsonify({"success": True}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Room number already exists"}), 409
+    finally:
+        conn.close()
+
+
+@app.route("/rooms/<int:rid>", methods=["PUT"])
+def update_room(rid):
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+    st = request.json.get("status", "").strip()
+    if st not in ("Available", "Occupied", "Maintenance"):
+        conn.close()
+        return jsonify({"error": "Invalid status"}), 400
+    conn.execute("UPDATE Rooms SET status=? WHERE room_id=?", (st, rid))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
+@app.route("/rooms/<int:rid>", methods=["DELETE"])
+def delete_room(rid):
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+    conn.execute("DELETE FROM Rooms WHERE room_id=?", (rid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
+@app.route("/report-fault", methods=["POST"])
+def report_fault():
+    d   = request.json
+    uid = session.get("user_id") or d.get("user_id")
+    if not uid:
+        return jsonify({"success": False, "message": "Not logged in"}), 401
+
+    room        = d.get("room", d.get("room_number", "")).strip()
+    title       = d.get("title", d.get("issue", "")).strip()
+    description = d.get("description", "").strip()
+    priority    = d.get("priority", "").strip()
+
+    if not all([room, title, description, priority]):
+        return jsonify({"success": False, "message": "All fields are required."}), 400
+
+    if priority not in ("High", "Medium", "Low"):
+        return jsonify({"success": False, "message": "Invalid priority."}), 400
 
     conn = connect_db()
-    c = conn.cursor()
+    conn.execute("INSERT OR IGNORE INTO Rooms(room_number) VALUES(?)", (room,))
+    conn.commit()
 
-    if user_id:
-        c.execute("""
-        SELECT type, sent_time
-        FROM Notifications
-        WHERE user_id=?
-        ORDER BY sent_time DESC
-        LIMIT 20
-        """, (user_id,))
-    else:
-        c.execute("""
-        SELECT type, sent_time
-        FROM Notifications
-        ORDER BY sent_time DESC
-        LIMIT 20
-        """)
+    conn.execute("""
+        INSERT INTO requests(room, title, description, priority, user_id, status)
+        VALUES (?,?,?,?,?,'Reported')
+    """, (room, title, description, priority, uid))
+    conn.commit()
 
-    rows = c.fetchall()
+    req_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+
+    room_row = conn.execute("SELECT room_id FROM Rooms WHERE room_number=?", (room,)).fetchone()
+    if room_row:
+        existing_rs = conn.execute("SELECT room_status_id FROM RoomStatus WHERE room_id=?", (room_row["room_id"],)).fetchone()
+        if existing_rs:
+            conn.execute(
+                "UPDATE RoomStatus SET total_issues=total_issues+1, last_reported_issue=CURRENT_TIMESTAMP WHERE room_id=?",
+                (room_row["room_id"],)
+            )
+        else:
+            conn.execute(
+                "INSERT INTO RoomStatus(room_id, total_issues, last_reported_issue) VALUES(?,1,CURRENT_TIMESTAMP)",
+                (room_row["room_id"],)
+            )
+        conn.commit()
+
+    notify(uid, req_id, f"Your fault report for Room {room} has been received. Reference: #{req_id}", "Confirmation")
+
+    if priority == "High":
+        managers = conn.execute("SELECT user_id FROM Users WHERE role='Manager'").fetchall()
+        for m in managers:
+            notify(m["user_id"], req_id, f"High priority fault in Room {room}: {title}", "New Request")
+
     conn.close()
+    audit(uid, "SUBMIT_FAULT", f"Room {room} - {title} ({priority})")
+    return jsonify({"success": True, "request_id": req_id})
 
-    return jsonify([{"type": r["type"], "time": r["sent_time"]} for r in rows])
+
+@app.route("/requests", methods=["GET"])
+def get_requests():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+
+    if role == "Manager":
+        rows = conn.execute("""
+            SELECT req.*,
+                   u.first_name||' '||u.surname AS reporter_name,
+                   a.first_name||' '||a.surname AS assigned_name
+            FROM requests req
+            LEFT JOIN Users u ON u.user_id = req.user_id
+            LEFT JOIN Users a ON a.user_id = req.assigned_to
+            ORDER BY req.id DESC
+        """).fetchall()
+    elif role in ("Staff", "Subcontractor"):
+        rows = conn.execute("""
+            SELECT req.*,
+                   u.first_name||' '||u.surname AS reporter_name,
+                   a.first_name||' '||a.surname AS assigned_name
+            FROM requests req
+            LEFT JOIN Users u ON u.user_id = req.user_id
+            LEFT JOIN Users a ON a.user_id = req.assigned_to
+            WHERE req.assigned_to=? OR req.status='Reported'
+            ORDER BY req.id DESC
+        """, (uid,)).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT req.*,
+                   u.first_name||' '||u.surname AS reporter_name,
+                   a.first_name||' '||a.surname AS assigned_name
+            FROM requests req
+            LEFT JOIN Users u ON u.user_id = req.user_id
+            LEFT JOIN Users a ON a.user_id = req.assigned_to
+            WHERE req.user_id=?
+            ORDER BY req.id DESC
+        """, (uid,)).fetchall()
+
+    conn.close()
+    result = []
+    for r in rows:
+        row = dict(r)
+        row["request_id"]  = row["id"]
+        row["room_number"] = row["room"]
+        result.append(row)
+    return jsonify(result)
 
 
-# IMPORTANT: ALWAYS LAST
+@app.route("/requests/<int:rid>/assign", methods=["PUT"])
+def assign_request(rid):
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+
+    assigned_to = request.json.get("assigned_to")
+    if not assigned_to:
+        conn.close()
+        return jsonify({"error": "Please select a person to assign to"}), 400
+
+    conn.execute("UPDATE requests SET assigned_to=?, status='In Progress' WHERE id=?", (assigned_to, rid))
+    conn.commit()
+
+    req = conn.execute("SELECT title, room, user_id FROM requests WHERE id=?", (rid,)).fetchone()
+    if req:
+        notify(assigned_to, rid, f"You have been assigned: '{req['title']}' in Room {req['room']}.", "Assignment")
+        notify(req["user_id"], rid, f"Your request for Room {req['room']} is now In Progress.", "Update")
+
+    conn.close()
+    audit(uid, "ASSIGN", f"Request #{rid} assigned to user {assigned_to}")
+    return jsonify({"success": True})
+
+
+@app.route("/requests/<int:rid>/status", methods=["PUT"])
+def update_status(rid):
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+
+    new_status = request.json.get("status", "").strip()
+    if new_status not in ("In Progress", "Completed"):
+        return jsonify({"error": "Invalid status"}), 400
+
+    conn = connect_db()
+    conn.execute("UPDATE requests SET status=? WHERE id=?", (new_status, rid))
+    conn.commit()
+
+    if new_status == "Completed":
+        req = conn.execute("SELECT title, room, user_id FROM requests WHERE id=?", (rid,)).fetchone()
+        if req:
+            notify(req["user_id"], rid,
+                   f"Your maintenance request for Room {req['room']} ({req['title']}) has been completed.",
+                   "Completed")
+            room_row = conn.execute("SELECT room_id FROM Rooms WHERE room_number=?", (req["room"],)).fetchone()
+            if room_row:
+                conn.execute("UPDATE Rooms SET status='Available' WHERE room_id=?", (room_row["room_id"],))
+                conn.commit()
+
+    conn.close()
+    audit(uid, "UPDATE_STATUS", f"Request #{rid} set to {new_status}")
+    return jsonify({"success": True})
+
+
+@app.route("/staff", methods=["GET"])
+def get_staff():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+    rows = conn.execute(
+        "SELECT user_id, first_name, surname, role FROM Users WHERE role IN ('Staff','Subcontractor') ORDER BY role, first_name"
+    ).fetchall()
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/feedback", methods=["POST"])
+def submit_feedback():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    d          = request.json
+    request_id = d.get("request_id")
+    rating     = d.get("rating")
+    comments   = d.get("comments", "").strip()
+
+    if not request_id or not rating:
+        return jsonify({"error": "Request and rating are required"}), 400
+    if not (1 <= int(rating) <= 5):
+        return jsonify({"error": "Rating must be between 1 and 5"}), 400
+
+    conn = connect_db()
+    req = conn.execute("SELECT status FROM requests WHERE id=?", (request_id,)).fetchone()
+    if not req or req["status"] != "Completed":
+        conn.close()
+        return jsonify({"error": "Feedback can only be submitted for completed requests"}), 400
+
+    existing = conn.execute(
+        "SELECT feedback_id FROM Feedback WHERE request_id=? AND user_id=?", (request_id, uid)
+    ).fetchone()
+    if existing:
+        conn.close()
+        return jsonify({"error": "You have already submitted feedback for this request"}), 409
+
+    conn.execute(
+        "INSERT INTO Feedback(request_id, user_id, rating, comments) VALUES(?,?,?,?)",
+        (request_id, uid, rating, comments)
+    )
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True}), 201
+
+
+@app.route("/feedback", methods=["GET"])
+def get_feedback():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+
+    if role in ("Manager", "Staff"):
+        rows = conn.execute("""
+            SELECT f.*, u.first_name||' '||u.surname AS guest_name,
+                   req.title, req.room AS room_number
+            FROM Feedback f
+            JOIN Users u   ON u.user_id   = f.user_id
+            JOIN requests req ON req.id   = f.request_id
+            ORDER BY f.created_at DESC
+        """).fetchall()
+    else:
+        rows = conn.execute("""
+            SELECT f.*, req.title, req.room AS room_number
+            FROM Feedback f
+            JOIN requests req ON req.id = f.request_id
+            WHERE f.user_id=?
+            ORDER BY f.created_at DESC
+        """, (uid,)).fetchall()
+
+    conn.close()
+    return jsonify([dict(r) for r in rows])
+
+
+@app.route("/notifications", methods=["GET"])
+def get_notifications():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    rows = conn.execute(
+        "SELECT * FROM Notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 30", (uid,)
+    ).fetchall()
+    conn.close()
+    result = []
+    for r in rows:
+        row = dict(r)
+        row["sent_time"] = row.get("created_at")
+        result.append(row)
+    return jsonify(result)
+
+
+@app.route("/notifications/read", methods=["PUT"])
+def mark_read():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    conn.execute("UPDATE Notifications SET is_read=1 WHERE user_id=?", (uid,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
+@app.route("/analytics", methods=["GET"])
+def analytics():
+    uid = session.get("user_id")
+    if not uid:
+        return jsonify({"error": "Not logged in"}), 401
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role != "Manager":
+        conn.close()
+        return jsonify({"error": "Manager access required"}), 403
+
+    total     = conn.execute("SELECT COUNT(*) FROM requests").fetchone()[0]
+    reported  = conn.execute("SELECT COUNT(*) FROM requests WHERE status='Reported'").fetchone()[0]
+    in_prog   = conn.execute("SELECT COUNT(*) FROM requests WHERE status='In Progress'").fetchone()[0]
+    completed = conn.execute("SELECT COUNT(*) FROM requests WHERE status='Completed'").fetchone()[0]
+    high      = conn.execute("SELECT COUNT(*) FROM requests WHERE priority='High'").fetchone()[0]
+    medium    = conn.execute("SELECT COUNT(*) FROM requests WHERE priority='Medium'").fetchone()[0]
+    low       = conn.execute("SELECT COUNT(*) FROM requests WHERE priority='Low'").fetchone()[0]
+
+    avg_row    = conn.execute("SELECT ROUND(AVG(rating),1) AS avg_r FROM Feedback").fetchone()
+    avg_rating = avg_row["avg_r"] if avg_row["avg_r"] else None
+
+    top_rooms = conn.execute("""
+        SELECT room AS room_number, COUNT(*) AS issue_count
+        FROM requests
+        GROUP BY room
+        ORDER BY issue_count DESC
+        LIMIT 5
+    """).fetchall()
+
+    unresolved = conn.execute("""
+        SELECT id AS request_id, room AS room_number, title, priority, status, report_time
+        FROM requests
+        WHERE status != 'Completed'
+        ORDER BY CASE priority WHEN 'High' THEN 1 WHEN 'Medium' THEN 2 ELSE 3 END, report_time ASC
+        LIMIT 10
+    """).fetchall()
+
+    monthly = conn.execute("""
+        SELECT strftime('%Y-%m', report_time) AS month, COUNT(*) AS count
+        FROM requests
+        GROUP BY month
+        ORDER BY month DESC
+        LIMIT 6
+    """).fetchall()
+
+    staff_perf = conn.execute("""
+        SELECT u.user_id, u.first_name||' '||u.surname AS name, u.role,
+               COUNT(r.id)                                          AS total,
+               SUM(CASE WHEN r.status='Completed'   THEN 1 ELSE 0 END) AS done,
+               SUM(CASE WHEN r.status='In Progress' THEN 1 ELSE 0 END) AS active
+        FROM Users u
+        LEFT JOIN requests r ON r.assigned_to = u.user_id
+        WHERE u.role IN ('Staff','Subcontractor')
+        GROUP BY u.user_id
+        ORDER BY done DESC
+    """).fetchall()
+
+    avg_feedback = conn.execute("""
+        SELECT u.first_name||' '||u.surname AS name,
+               ROUND(AVG(f.rating),1)       AS avg_rating,
+               COUNT(*)                     AS review_count
+        FROM Feedback f
+        JOIN requests req ON req.id        = f.request_id
+        JOIN Users u      ON u.user_id     = req.assigned_to
+        WHERE req.assigned_to IS NOT NULL
+        GROUP BY req.assigned_to
+    """).fetchall()
+
+    conn.close()
+    return jsonify({
+        "total":             total,
+        "reported":          reported,
+        "in_progress":       in_prog,
+        "completed":         completed,
+        "high":              high,
+        "medium":            medium,
+        "low":               low,
+        "avg_rating":        avg_rating,
+        "top_rooms":         [dict(r) for r in top_rooms],
+        "unresolved":        [dict(r) for r in unresolved],
+        "monthly":           [dict(r) for r in monthly],
+        "staff_performance": [dict(r) for r in staff_perf],
+        "avg_feedback":      [dict(r) for r in avg_feedback]
+    })
+
+
 if __name__ == "__main__":
-    print("Using DB:", DB_PATH)
     app.run(debug=True)
