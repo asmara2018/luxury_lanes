@@ -4,191 +4,317 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Analytics - Luxury Lanes</title>
+
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-body{background:#CFFDFF;min-height:100vh;display:flex;}
-.sidebar{width:220px;min-height:100vh;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,.08);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;}
-.sb-brand{text-align:center;padding:26px 20px 20px;border-bottom:1px solid #e8f4f4;}
-.sb-brand h2{font-family:Georgia,serif;font-size:19px;font-weight:700;color:#1a1a1a;}
-.sb-brand p{font-size:12px;color:#888;margin-top:4px;}
-.nav-links{list-style:none;margin-top:12px;flex:1;}
-.nav-links li a{display:flex;align-items:center;gap:11px;padding:12px 22px;text-decoration:none;font-size:14px;font-weight:600;color:#555;border-left:3px solid transparent;transition:all .18s;}
-.nav-links li a:hover,.nav-links li a.active{background:#f0faff;color:#3578e5;border-left:3px solid #3578e5;}
-.sb-foot{padding:16px 20px;border-top:1px solid #e8f4f4;}
-.btn-logout{width:100%;padding:9px;background:#fff;border:2px solid #e05252;color:#e05252;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;}
-.btn-logout:hover{background:#e05252;color:#fff;}
-.main{flex:1;padding:32px 36px;overflow-y:auto;}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;}
-.topbar h1{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a1a1a;}
-.topbar p{font-size:13px;color:#777;margin-top:3px;}
-.ubadge{background:#fff;border-radius:12px;padding:9px 16px;display:flex;align-items:center;gap:9px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
-.avatar{width:34px;height:34px;border-radius:50%;background:#3578e5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;}
-.ubadge strong{display:block;font-size:13px;color:#1a1a1a;}
-.ubadge span{font-size:11px;color:#888;}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
-.stat{background:#fff;border-radius:14px;padding:18px;box-shadow:0 4px 18px rgba(0,0,0,.07);}
-.stat .lbl{font-size:11px;color:#999;font-weight:700;text-transform:uppercase;letter-spacing:.5px;}
-.stat .val{font-size:32px;font-weight:700;color:#1a1a1a;margin:5px 0 3px;}
-.stat .sub{font-size:12px;color:#bbb;}
-.stat.blue{border-left:4px solid #3578e5;}
-.stat.red{border-left:4px solid #e05252;}
-.stat.orange{border-left:4px solid #f0a500;}
-.stat.green{border-left:4px solid #27ae60;}
-.stat.purple{border-left:4px solid #9b59b6;}
-.two-col{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:22px;}
-.card{background:#fff;border-radius:14px;padding:22px 24px;box-shadow:0 4px 18px rgba(0,0,0,.07);margin-bottom:22px;}
-.card h2{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #f0f0f0;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-thead th{text-align:left;padding:8px 12px;color:#999;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #f0f0f0;}
-tbody tr{border-bottom:1px solid #f8f8f8;}
-tbody tr:hover{background:#f5fdff;}
-tbody td{padding:10px 12px;color:#333;vertical-align:middle;}
-.te{text-align:center;color:#bbb;padding:22px;font-size:13px;}
-.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;text-transform:uppercase;}
-.bh{background:#fde8e8;color:#c0392b;}
-.bm{background:#fef3e0;color:#d68910;}
-.bl{background:#e6f9f0;color:#1e8449;}
-.sbadge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;}
-.sr{background:#eef2ff;color:#3578e5;}
-.si{background:#fff8e1;color:#f0a500;}
-.sc{background:#e6f9f0;color:#1e8449;}
-.bar-row{margin-bottom:12px;}
-.bar-label{display:flex;justify-content:space-between;font-size:13px;color:#555;margin-bottom:4px;}
-.bar-track{background:#f0f0f0;border-radius:20px;height:10px;overflow:hidden;}
-.bar-fill{height:100%;border-radius:20px;transition:width 0.6s;}
-.perf-row{display:flex;align-items:center;padding:12px 0;border-bottom:1px solid #f0f0f0;gap:16px;}
-.perf-row:last-child{border-bottom:none;}
-.perf-name{min-width:160px;font-weight:600;font-size:14px;color:#1a1a1a;}
-.perf-role{font-size:11px;color:#aaa;}
-.perf-bars{flex:1;}
-.perf-score{font-size:22px;font-weight:700;color:#3578e5;min-width:50px;text-align:right;}
-.grade{display:inline-block;padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;margin-left:6px;}
-.ga{background:#e6f9f0;color:#1e8449;}
-.gb{background:#eef2ff;color:#3578e5;}
-.gc{background:#fff8e1;color:#d68910;}
-.gd{background:#fde8e8;color:#c0392b;}
-.stars{color:#f39c12;font-size:14px;}
-@media(max-width:960px){.stats{grid-template-columns:repeat(2,1fr);}.two-col{grid-template-columns:1fr;}}
-@media(max-width:640px){.sidebar{display:none;}.main{padding:16px;}}
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:Arial,sans-serif;
+}
+
+body{
+  background:#CFFDFF;
+  min-height:100vh;
+  display:flex;
+}
+
+.sidebar{
+  width:220px;
+  background:#fff;
+  min-height:100vh;
+  box-shadow:3px 0 15px rgba(0,0,0,0.08);
+  display:flex;
+  flex-direction:column;
+}
+
+.sidebar-brand{
+  text-align:center;
+  padding:28px 20px;
+  border-bottom:1px solid #e8f4f4;
+}
+
+.sidebar-brand h2{
+  font-family:Georgia,serif;
+  font-size:20px;
+}
+
+.sidebar-brand p{
+  font-size:12px;
+  color:#888;
+  margin-top:4px;
+}
+
+.nav-links{
+  list-style:none;
+  flex:1;
+}
+
+.nav-link{
+  display:block;
+  padding:13px 24px;
+  text-decoration:none;
+  font-size:14px;
+  font-weight:600;
+  color:#555;
+  border-left:3px solid transparent;
+}
+
+.nav-link:hover,
+.nav-link.active{
+  background:#f0faff;
+  color:#3578e5;
+  border-left:3px solid #3578e5;
+}
+
+.sidebar-footer{
+  padding:18px;
+  border-top:1px solid #e8f4f4;
+}
+
+.btn-logout{
+  width:100%;
+  padding:10px;
+  border:2px solid #e05252;
+  background:#fff;
+  color:#e05252;
+  border-radius:8px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+.main{
+  flex:1;
+  padding:35px 40px;
+}
+
+.topbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:30px;
+}
+
+.topbar h1{
+  font-family:Georgia,serif;
+  font-size:22px;
+}
+
+.back-btn{
+  padding:8px 16px;
+  background:#f0f4f8;
+  border-radius:8px;
+  text-decoration:none;
+  color:#3578e5;
+  font-weight:700;
+  font-size:13px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:18px;
+  margin-bottom:25px;
+}
+
+.stat{
+  background:#fff;
+  border-radius:14px;
+  padding:22px;
+  box-shadow:0 4px 18px rgba(0,0,0,0.07);
+}
+
+.stat-title{
+  font-size:12px;
+  color:#888;
+  font-weight:600;
+}
+
+.stat-value{
+  font-size:30px;
+  font-weight:700;
+  margin-top:6px;
+}
+
+.card{
+  background:#fff;
+  border-radius:14px;
+  padding:26px;
+  box-shadow:0 4px 18px rgba(0,0,0,0.07);
+  margin-bottom:20px;
+}
+
+.card h2{
+  margin-bottom:18px;
+}
+
+.metrics-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:18px;
+}
+
+.metric{
+  background:#f7fbff;
+  padding:18px;
+  border-radius:12px;
+}
+
+.metric-title{
+  font-size:12px;
+  font-weight:600;
+  color:#666;
+}
+
+.metric-value{
+  font-size:24px;
+  font-weight:700;
+  margin-top:6px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  font-size:13px;
+}
+
+thead th{
+  text-align:left;
+  padding:8px;
+  border-bottom:2px solid #eee;
+}
+
+tbody td{
+  padding:8px;
+}
 </style>
 </head>
+
 <body>
+
 <aside class="sidebar">
-  <div class="sb-brand"><h2>Luxury Lanes</h2><p id="sbRole">Loading...</p></div>
-  <ul class="nav-links" id="navLinks"></ul>
-  <div class="sb-foot"><button class="btn-logout" onclick="logout()">Log Out</button></div>
+  <div class="sidebar-brand">
+    <h2>Luxury Lanes</h2>
+    <p id="sbRole">Manager</p>
+  </div>
+
+  <ul class="nav-links">
+    <li><a href="Dashboard.html" class="nav-link">Dashboard</a></li>
+    <li><a href="ReportFault.html" class="nav-link">Report Fault</a></li>
+    <li><a href="ViewRequests.html" class="nav-link">View Requests</a></li>
+    <li><a href="ManageRequests.html" class="nav-link">Manage Requests</a></li>
+    <li><a href="ManageRooms.html" class="nav-link">Manage Rooms</a></li>
+    <li><a href="Feedback.html" class="nav-link">Feedback</a></li>
+    <li><a href="Notifications.html" class="nav-link">Notifications</a></li>
+    <li><a href="Analytics.html" class="nav-link active">Analytics</a></li>
+  </ul>
+
+  <div class="sidebar-footer">
+    <button class="btn-logout" onclick="logout()">Log Out</button>
+  </div>
 </aside>
+
 <main class="main">
-  <div class="topbar">
-    <div><h1>Analytics & Reports</h1><p>Performance overview for hotel maintenance</p></div>
-    <div class="ubadge">
-      <div class="avatar" id="avatarInit">?</div>
-      <div><strong id="badgeName">Loading...</strong><span id="badgeRole">-</span></div>
+
+<div class="topbar">
+  <h1>Performance Analytics</h1>
+  <a href="Dashboard.html" class="back-btn">← Dashboard</a>
+</div>
+
+<div class="stats">
+  <div class="stat">
+    <div class="stat-title">Total Requests</div>
+    <div class="stat-value" id="total">-</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">Completed</div>
+    <div class="stat-value" id="completed">-</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">In Progress</div>
+    <div class="stat-value" id="progress">-</div>
+  </div>
+  <div class="stat">
+    <div class="stat-title">High Priority</div>
+    <div class="stat-value" id="high">-</div>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Detailed Performance Metrics</h2>
+
+  <div class="metrics-grid">
+    <div class="metric">
+      <div class="metric-title">Average Completion Time</div>
+      <div class="metric-value" id="avgTime">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">Median Completion Time</div>
+      <div class="metric-value" id="medianTime">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">On-Time Rate (%)</div>
+      <div class="metric-value" id="onTime">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">Repeat Issue Rate (%)</div>
+      <div class="metric-value" id="repeat">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">SLA Breaches</div>
+      <div class="metric-value" id="sla">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">Escalation Rate (%)</div>
+      <div class="metric-value" id="escalation">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">Data Quality Score (%)</div>
+      <div class="metric-value" id="quality">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">Average Rating</div>
+      <div class="metric-value" id="rating">-</div>
+    </div>
+    <div class="metric">
+      <div class="metric-title">Performance Index (%)</div>
+      <div class="metric-value" id="performance">-</div>
     </div>
   </div>
-  <div class="stats">
-    <div class="stat blue"><div class="lbl">Total Requests</div><div class="val" id="aTotal">-</div><div class="sub">All time</div></div>
-    <div class="stat green"><div class="lbl">Completed</div><div class="val" id="aDone">-</div><div class="sub">Resolved faults</div></div>
-    <div class="stat orange"><div class="lbl">Unresolved</div><div class="val" id="aOpen">-</div><div class="sub">Reported + In Progress</div></div>
-    <div class="stat purple"><div class="lbl">Avg Feedback</div><div class="val" id="aRating">-</div><div class="sub">Out of 5</div></div>
-  </div>
-  <div class="two-col">
-    <div class="card" style="margin-bottom:0;">
-      <h2>Priority Breakdown</h2>
-      <div id="priBreakdown"><p class="te">Loading...</p></div>
-    </div>
-    <div class="card" style="margin-bottom:0;">
-      <h2>Status Breakdown</h2>
-      <div id="statBreakdown"><p class="te">Loading...</p></div>
-    </div>
-  </div>
-  <div style="height:22px;"></div>
-  <div class="two-col">
-    <div class="card" style="margin-bottom:0;">
-      <h2>Top 5 Problem Rooms</h2>
-      <table>
-        <thead><tr><th>Room</th><th>Total Issues</th><th>Bar</th></tr></thead>
-        <tbody id="topRooms"><tr><td colspan="3" class="te">Loading...</td></tr></tbody>
-      </table>
-    </div>
-    <div class="card" style="margin-bottom:0;">
-      <h2>Monthly Request Volume</h2>
-      <div id="monthlyChart"><p class="te">Loading...</p></div>
-    </div>
-  </div>
-  <div style="height:22px;"></div>
-  <div class="card">
-    <h2>Unresolved Requests</h2>
-    <table>
-      <thead><tr><th>ID</th><th>Room</th><th>Issue</th><th>Priority</th><th>Status</th><th>Reported</th></tr></thead>
-      <tbody id="unresolvedRows"><tr><td colspan="6" class="te">Loading...</td></tr></tbody>
-    </table>
-  </div>
-  <div class="card">
-    <h2>Staff and Subcontractor Performance Scores</h2>
-    <p style="font-size:13px;color:#888;margin-bottom:18px;">Score based on: jobs completed (50%), active workload (30%), and guest feedback (20%). Higher is better.</p>
-    <div id="perfRows"><p class="te">Loading...</p></div>
-  </div>
-  <div class="card">
-    <h2>Guest Feedback by Staff Member</h2>
-    <table>
-      <thead><tr><th>Name</th><th>Avg Rating</th><th>Reviews</th><th>Visual</th></tr></thead>
-      <tbody id="feedbackRows"><tr><td colspan="4" class="te">Loading...</td></tr></tbody>
-    </table>
-  </div>
+</div>
+
 </main>
+
 <script>
-var API='http://127.0.0.1:5000';
-var NAV=[{l:'Dashboard',h:'Dashboard.html'},{l:'All Requests',h:'ViewRequests.html'},{l:'Manage Requests',h:'ManageRequests.html'},{l:'Manage Rooms',h:'ManageRooms.html'},{l:'Analytics',h:'Analytics.html'},{l:'Feedback',h:'Feedback.html'},{l:'Notifications',h:'Notifications.html'}];
-function logout(){if(!confirm('Log out?'))return;fetch(API+'/logout',{method:'POST',credentials:'include'}).finally(function(){window.location.href='Login.html';});}
-function pBadge(p){var c=p==='High'?'bh':p==='Medium'?'bm':'bl';return '<span class="badge '+c+'">'+p+'</span>';}
-function sBadge(s){var c=s==='Reported'?'sr':s==='In Progress'?'si':'sc';return '<span class="sbadge '+c+'">'+s+'</span>';}
-function fmtDate(d){return d?d.slice(0,10):'-';}
-function starsHtml(n){var s='';var r=Math.round(n);for(var i=1;i<=5;i++)s+=i<=r?'&#9733;':'&#9734;';return '<span class="stars">'+s+'</span>';}
-function bar(label,val,total,colour){var pct=total>0?Math.round(val/total*100):0;return '<div class="bar-row"><div class="bar-label"><span>'+label+'</span><span>'+val+' ('+pct+'%)</span></div><div class="bar-track"><div class="bar-fill" style="width:'+pct+'%;background:'+colour+';"></div></div></div>';}
-function grade(score){if(score>=75)return '<span class="grade ga">A</span>';if(score>=55)return '<span class="grade gb">B</span>';if(score>=35)return '<span class="grade gc">C</span>';return '<span class="grade gd">D</span>';}
-window.onload=function(){
-  fetch(API+'/me',{credentials:'include'})
-  .then(function(r){if(r.status===401){window.location.href='Login.html';return Promise.reject();}return r.json();})
-  .then(function(u){
-    if(u.role!=='Manager'){window.location.href='Dashboard.html';return;}
-    document.getElementById('sbRole').textContent=u.role;
-    document.getElementById('navLinks').innerHTML=NAV.map(function(l){return '<li><a href="'+l.h+'" class="'+(l.h==='Analytics.html'?'active':'')+'">'+l.l+'</a></li>';}).join('');
-    document.getElementById('badgeName').textContent=u.first_name+' '+u.surname;
-    document.getElementById('badgeRole').textContent=u.role;
-    document.getElementById('avatarInit').textContent=u.first_name.charAt(0).toUpperCase();
-    loadAnalytics();
-  }).catch(function(){});
-};
-function loadAnalytics(){
-  fetch(API+'/analytics',{credentials:'include'})
-  .then(function(r){return r.json();})
-  .then(function(d){
-    document.getElementById('aTotal').textContent=d.total;
-    document.getElementById('aDone').textContent=d.completed;
-    document.getElementById('aOpen').textContent=d.reported+d.in_progress;
-    document.getElementById('aRating').textContent=d.avg_rating>0?d.avg_rating+'/5':'-';
-    var t=d.total||1;
-    document.getElementById('priBreakdown').innerHTML=bar('High Priority',d.high,t,'#e05252')+bar('Medium Priority',d.medium,t,'#f0a500')+bar('Low Priority',d.low,t,'#27ae60');
-    document.getElementById('statBreakdown').innerHTML=bar('Reported',d.reported,t,'#3578e5')+bar('In Progress',d.in_progress,t,'#f0a500')+bar('Completed',d.completed,t,'#27ae60');
-    var mx=d.top_rooms.length?d.top_rooms[0].issue_count:1;
-    document.getElementById('topRooms').innerHTML=d.top_rooms.length?d.top_rooms.map(function(r){var p=Math.round(r.issue_count/mx*100);return '<tr><td><strong>Room '+r.room_number+'</strong></td><td>'+r.issue_count+'</td><td><div class="bar-track" style="width:90px;"><div class="bar-fill" style="width:'+p+'%;background:#3578e5;"></div></div></td></tr>';}).join(''):'<tr><td colspan="3" class="te">No data yet.</td></tr>';
-    var mm=d.monthly.length?Math.max.apply(null,d.monthly.map(function(m){return m.count;})):1;
-    document.getElementById('monthlyChart').innerHTML=d.monthly.length?d.monthly.map(function(m){var p=Math.round(m.count/mm*100);return '<div class="bar-row"><div class="bar-label"><span>'+m.month+'</span><span>'+m.count+'</span></div><div class="bar-track"><div class="bar-fill" style="width:'+p+'%;background:#3578e5;"></div></div></div>';}).join(''):'<p class="te">No data yet.</p>';
-    document.getElementById('unresolvedRows').innerHTML=d.unresolved.length?d.unresolved.map(function(r){return '<tr><td style="color:#bbb;font-size:12px;">#'+r.request_id+'</td><td><strong>'+r.room_number+'</strong></td><td>'+r.title+'</td><td>'+pBadge(r.priority)+'</td><td>'+sBadge(r.status)+'</td><td>'+fmtDate(r.report_time)+'</td></tr>';}).join(''):'<tr><td colspan="6" class="te">No unresolved requests.</td></tr>';
-    if(d.staff_performance&&d.staff_performance.length){
-      document.getElementById('perfRows').innerHTML=d.staff_performance.map(function(s){
-        var score=s.total>0?Math.round((s.done/s.total)*50+Math.min(s.active/5,1)*30):0;
-        var fb=d.avg_feedback.find(function(f){return f.name===s.name;});
-        if(fb)score=Math.min(100,score+Math.round((fb.avg_rating/5)*20));
-        return '<div class="perf-row"><div><div class="perf-name">'+s.name+'</div><div class="perf-role">'+s.role+'</div></div><div class="perf-bars"><div class="bar-track"><div class="bar-fill" style="width:'+score+'%;background:#3578e5;"></div></div><div style="font-size:11px;color:#bbb;margin-top:3px;">'+s.done+' completed / '+s.total+' assigned</div></div><div class="perf-score">'+score+grade(score)+'</div></div>';
-      }).join('');
-    } else {
-      document.getElementById('perfRows').innerHTML='<p class="te">No staff assigned to requests yet.</p>';
-    }
-    document.getElementById('feedbackRows').innerHTML=d.avg_feedback&&d.avg_feedback.length?d.avg_feedback.map(function(f){return '<tr><td><strong>'+f.name+'</strong></td><td>'+starsHtml(f.avg_rating)+' ('+f.avg_rating+')</td><td>'+f.review_count+'</td><td><div class="bar-track" style="width:90px;"><div class="bar-fill" style="width:'+Math.round(f.avg_rating/5*100)+'%;background:#f39c12;"></div></div></td></tr>';}).join(''):'<tr><td colspan="4" class="te">No feedback data yet.</td></tr>';
-  }).catch(function(){document.getElementById('aTotal').textContent='Error';});
+const API="http://127.0.0.1:5000";
+
+function logout(){
+  localStorage.clear();
+  window.location.href="Login.html";
 }
+
+function loadAnalytics(){
+  fetch(API+"/analytics")
+  .then(res=>res.json())
+  .then(data=>{
+    document.getElementById("total").textContent=data.total;
+    document.getElementById("completed").textContent=data.completed;
+    document.getElementById("progress").textContent=data.in_progress;
+    document.getElementById("high").textContent=data.high;
+    document.getElementById("avgTime").textContent=data.average_time;
+    document.getElementById("medianTime").textContent=data.median_time;
+    document.getElementById("onTime").textContent=data.on_time_rate;
+    document.getElementById("repeat").textContent=data.repeat_issue_rate;
+    document.getElementById("sla").textContent=data.sla_breaches;
+    document.getElementById("escalation").textContent=data.escalation_rate;
+    document.getElementById("quality").textContent=data.data_quality;
+    document.getElementById("rating").textContent=data.average_rating;
+    document.getElementById("performance").textContent=data.performance_index;
+  });
+}
+
+loadAnalytics();
 </script>
+
 </body>
 </html>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assign Job - Luxury Lanes</title>
+
+<style>
+*{
+margin:0;
+padding:0;
+box-sizing:border-box;
+font-family:Arial,sans-serif;
+}
+
+body{
+background:#CFFDFF;
+display:flex;
+min-height:100vh;
+}
+
+/* Sidebar */
+.sidebar{
+width:220px;
+background:#fff;
+box-shadow:3px 0 15px rgba(0,0,0,.08);
+display:flex;
+flex-direction:column;
+}
+
+.sidebar-brand{
+text-align:center;
+padding:28px 20px;
+border-bottom:1px solid #e8f4f4;
+}
+
+.nav-links{
+list-style:none;
+flex:1;
+}
+
+.nav-link{
+display:block;
+padding:13px 24px;
+text-decoration:none;
+font-size:14px;
+font-weight:600;
+color:#555;
+border-left:3px solid transparent;
+}
+
+.nav-link:hover,
+.nav-link.active{
+background:#f0faff;
+color:#3578e5;
+border-left:3px solid #3578e5;
+}
+
+.sidebar-footer{
+padding:18px;
+border-top:1px solid #e8f4f4;
+}
+
+.btn-logout{
+width:100%;
+padding:10px;
+border:2px solid #e05252;
+background:#fff;
+color:#e05252;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+}
+
+/* Main Content */
+.main{
+flex:1;
+padding:40px;
+}
+
+.card{
+background:#fff;
+border-radius:14px;
+padding:30px;
+max-width:900px;
+margin:auto;
+box-shadow:0 4px 18px rgba(0,0,0,.08);
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-bottom:25px;
+}
+
+thead th{
+text-align:left;
+padding:10px;
+background:#f5fdff;
+font-size:12px;
+text-transform:uppercase;
+color:#888;
+}
+
+tbody td{
+padding:10px;
+border-bottom:1px solid #eee;
+}
+
+tbody tr:hover{
+background:#f0faff;
+cursor:pointer;
+}
+
+input,select,textarea{
+width:100%;
+padding:10px;
+margin-top:6px;
+border-radius:8px;
+border:1px solid #ccc;
+}
+
+button{
+margin-top:15px;
+padding:12px;
+width:100%;
+background:#3578e5;
+color:#fff;
+border:none;
+border-radius:8px;
+font-weight:600;
+cursor:pointer;
+}
+
+#staffSuggestions div{
+padding:8px;
+cursor:pointer;
+border-bottom:1px solid #eee;
+}
+
+#staffSuggestions div:hover{
+background:#f0faff;
+}
+</style>
+
+</head>
+
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+
+<div class="sidebar-brand">
+<h2>Luxury Lanes</h2>
+<p id="sbRole">Role</p>
+</div>
+
+<ul class="nav-links" id="navLinks"></ul>
+
+<div class="sidebar-footer">
+<button class="btn-logout" onclick="logout()">Log Out</button>
+</div>
+
+</aside>
+
+<!-- Main -->
+<main class="main">
+
+<div class="card">
+
+<h2>Assign Maintenance Job</h2>
+<br>
+
+<h4>Select Request</h4>
+
+<table>
+<thead>
+<tr>
+<th>Select</th>
+<th>ID</th>
+<th>Room</th>
+<th>Issue</th>
+<th>Priority</th>
+<th>Status</th>
+</tr>
+</thead>
+
+<tbody id="requestTable">
+<tr>
+<td colspan="6">Loading requests...</td>
+</tr>
+</tbody>
+</table>
+
+<input type="hidden" id="selectedRequest">
+
+<form id="assignForm">
+
+<div class="form-group">
+<label>Staff Search</label>
+<input type="text" id="staffSearch" placeholder="Search staff">
+<div id="staffSuggestions"></div>
+</div>
+
+<div class="form-group">
+<label>Staff Email</label>
+<input type="email" id="staffEmail" readonly>
+</div>
+
+<div class="form-group">
+<label>Priority</label>
+<select id="priority">
+<option>Low</option>
+<option>Medium</option>
+<option>High</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>Notes</label>
+<textarea id="notes"></textarea>
+</div>
+
+<button type="submit">Assign Job + Send Email</button>
+
+</form>
+
+</div>
+
+</main>
+
+<script>
+
+/* Sidebar Navigation */
+var NAV_LINKS={
+
+Guest:[
+{label:"Dashboard",href:"Dashboard.html"},
+{label:"Report a Fault",href:"ReportFault.html"},
+{label:"My Requests",href:"ViewRequests.html"},
+{label:"Analytics",href:"Analytics.html"},
+{label:"Feedback",href:"Feedback.html"},
+{label:"Notifications",href:"Notifications.html"}
+],
+
+Staff:[
+{label:"Dashboard",href:"Dashboard.html"},
+{label:"Report a Fault",href:"ReportFault.html"},
+{label:"My Tasks",href:"ViewRequests.html"},
+{label:"Assign a Job",href:"AssignJob.html"},
+{label:"Analytics",href:"Analytics.html"},
+{label:"Notifications",href:"Notifications.html"}
+],
+
+Manager:[
+{label:"Dashboard",href:"Dashboard.html"},
+{label:"All Requests",href:"ViewRequests.html"},
+{label:"Assign a Job",href:"AssignJob.html"},
+{label:"Manage Rooms",href:"ManageRooms.html"},
+{label:"Analytics",href:"Analytics.html"},
+{label:"Notifications",href:"Notifications.html"}
+]
+
+};
+
+function initNav(currentPage){
+
+let roleRaw=localStorage.getItem("role")||"Guest";
+let name=localStorage.getItem("name")||"User";
+
+let role="Guest";
+
+if(roleRaw.toLowerCase().includes("staff")) role="Staff";
+if(roleRaw.toLowerCase().includes("manager")) role="Manager";
+
+document.getElementById("sbRole").textContent=role;
+
+let links=NAV_LINKS[role];
+
+document.getElementById("navLinks").innerHTML=
+links.map(l=>{
+let active=l.href===currentPage?" active":"";
+return `<li><a href="${l.href}" class="nav-link${active}">${l.label}</a></li>`;
+}).join("");
+
+}
+
+/* Logout */
+function logout(){
+localStorage.clear();
+window.location.href="Login.html";
+}
+
+/* Load Requests */
+async function loadRequests(){
+
+const res=await fetch("http://127.0.0.1:5000/requests");
+const data=await res.json();
+
+let table=document.getElementById("requestTable");
+table.innerHTML="";
+
+data.forEach(req=>{
+table.innerHTML+=`
+<tr onclick="selectRequest(${req.id})">
+<td><input type="radio" name="req"></td>
+<td>${req.id}</td>
+<td>${req.room}</td>
+<td>${req.title}</td>
+<td>${req.priority}</td>
+<td>${req.status}</td>
+</tr>
+`;
+});
+
+}
+
+function selectRequest(id){
+document.getElementById("selectedRequest").value=id;
+}
+
+/* Staff Search */
+document.getElementById("staffSearch").addEventListener("input", async function(){
+
+let keyword=this.value;
+if(keyword.length<2) return;
+
+const res=await fetch("http://127.0.0.1:5000/staff");
+const data=await res.json();
+
+let box=document.getElementById("staffSuggestions");
+box.innerHTML="";
+
+data.forEach(staff=>{
+if(staff.first_name.toLowerCase().includes(keyword.toLowerCase())){
+
+let div=document.createElement("div");
+
+div.textContent=staff.first_name+" "+staff.surname+" ("+staff.role+")";
+
+div.onclick=()=>{
+staffSearch.value=staff.first_name+" "+staff.surname;
+staffEmail.value=staff.email;
+box.innerHTML="";
+};
+
+box.appendChild(div);
+}
+});
+
+});
+
+/* Submit Assignment */
+document.getElementById("assignForm").addEventListener("submit", async e=>{
+e.preventDefault();
+
+let requestId=document.getElementById("selectedRequest").value;
+
+await fetch(`http://127.0.0.1:5000/requests/${requestId}/assign`,{
+method:"PUT",
+headers:{ "Content-Type":"application/json" },
+credentials:"include",
+body:JSON.stringify({
+assigned_to:1
+})
+});
+
+alert("Job Assigned!");
+loadRequests();
+
+});
+
+initNav("AssignJob.html");
+loadRequests();
+
+</script>
+
+</body>
+</html>

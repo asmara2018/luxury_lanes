@@ -6,7 +6,13 @@ import secrets
 
 app = Flask(__name__)
 app.secret_key = "luxury_lanes_secret_2024"
-CORS(app, supports_credentials=True, origins=["null", "http://127.0.0.1:5500", "http://localhost:5500", "http://127.0.0.1:5000", "http://localhost:5000"])
+CORS(app, supports_credentials=True, origins=[
+    "null",
+    "http://127.0.0.1:5500",
+    "http://localhost:5500",
+    "http://127.0.0.1:5000",
+    "http://localhost:5000"
+])
 
 DB_PATH = "luxury_lanes.db"
 
@@ -19,7 +25,7 @@ def connect_db():
 
 
 def hash_password(password):
-    salt = secrets.token_hex(16)
+    salt   = secrets.token_hex(16)
     hashed = hashlib.sha256((password + salt).encode()).hexdigest()
     return hashed + ":" + salt
 
@@ -27,7 +33,8 @@ def hash_password(password):
 def check_password(password, stored):
     parts = stored.split(":")
     if len(parts) != 2:
-        return stored == password
+        # Legacy plain hash (sha256 with no salt) — used by old all-in-one app
+        return stored == hashlib.sha256(password.encode()).hexdigest()
     hashed = hashlib.sha256((password + parts[1]).encode()).hexdigest()
     return hashed == parts[0]
 
@@ -64,8 +71,7 @@ def init_db():
         email         TEXT UNIQUE NOT NULL,
         role          TEXT NOT NULL,
         password_hash TEXT NOT NULL
-    )
-    """)
+    )""")
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS Rooms (
@@ -73,9 +79,9 @@ def init_db():
         room_number TEXT UNIQUE NOT NULL,
         floor       INTEGER DEFAULT 1,
         status      TEXT DEFAULT 'Available'
-    )
-    """)
+    )""")
 
+    # requests uses room TEXT (room number directly) and NOT a FK to Rooms
     c.execute("""
     CREATE TABLE IF NOT EXISTS requests (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -89,8 +95,7 @@ def init_db():
         report_time DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id)     REFERENCES Users(user_id),
         FOREIGN KEY(assigned_to) REFERENCES Users(user_id)
-    )
-    """)
+    )""")
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS Feedback (
@@ -102,8 +107,7 @@ def init_db():
         created_at  DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(request_id) REFERENCES requests(id),
         FOREIGN KEY(user_id)    REFERENCES Users(user_id)
-    )
-    """)
+    )""")
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS Notifications (
@@ -116,19 +120,17 @@ def init_db():
         created_at      DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id)    REFERENCES Users(user_id),
         FOREIGN KEY(request_id) REFERENCES requests(id)
-    )
-    """)
+    )""")
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS PerformanceAnalytics (
-        analytics_id       INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id            INTEGER UNIQUE,
-        total_requests     INTEGER DEFAULT 0,
-        completed_requests INTEGER DEFAULT 0,
+        analytics_id        INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id             INTEGER UNIQUE,
+        total_requests      INTEGER DEFAULT 0,
+        completed_requests  INTEGER DEFAULT 0,
         avg_completion_time REAL DEFAULT 0,
         FOREIGN KEY(user_id) REFERENCES Users(user_id)
-    )
-    """)
+    )""")
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS RoomStatus (
@@ -137,8 +139,7 @@ def init_db():
         total_issues        INTEGER DEFAULT 0,
         last_reported_issue DATETIME,
         FOREIGN KEY(room_id) REFERENCES Rooms(room_id)
-    )
-    """)
+    )""")
 
     c.execute("""
     CREATE TABLE IF NOT EXISTS AuditLog (
@@ -148,16 +149,26 @@ def init_db():
         details       TEXT,
         time_recorded DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES Users(user_id)
-    )
-    """)
+    )""")
 
-    existing = conn.execute("SELECT COUNT(*) FROM Rooms").fetchone()[0]
-    if existing == 0:
+    # Seed rooms 101–130 if empty
+    if conn.execute("SELECT COUNT(*) FROM Rooms").fetchone()[0] == 0:
         rooms = []
         for i in range(1, 31):
             floor = ((i - 1) // 10) + 1
             rooms.append((str(100 + i), floor))
         c.executemany("INSERT INTO Rooms(room_number, floor) VALUES(?,?)", rooms)
+
+    # Seed a default manager account if no users exist
+    if conn.execute("SELECT COUNT(*) FROM Users").fetchone()[0] == 0:
+        pw = hash_password("manager123")
+        c.execute(
+            "INSERT INTO Users(first_name, surname, email, role, password_hash) VALUES(?,?,?,?,?)",
+            ("Hotel", "Manager", "manager@luxurylanes.com", "Manager", pw)
+        )
+        print("\n  Default manager account created:")
+        print("  Email:    manager@luxurylanes.com")
+        print("  Password: manager123\n")
 
     conn.commit()
     conn.close()
@@ -166,14 +177,18 @@ def init_db():
 init_db()
 
 
+# ──────────────────────────────────────────────
+#  AUTH
+# ──────────────────────────────────────────────
+
 @app.route("/register", methods=["POST"])
 def register():
     d          = request.json
     first_name = d.get("first_name", "").strip()
-    surname    = d.get("surname", "").strip()
-    email      = d.get("email", "").strip().lower()
-    role       = d.get("role", "").strip()
-    password   = d.get("password", "")
+    surname    = d.get("surname",    "").strip()
+    email      = d.get("email",      "").strip().lower()
+    role       = d.get("role",       "").strip()
+    password   = d.get("password",   "")
 
     if not all([first_name, surname, email, role, password]):
         return jsonify({"success": False, "message": "All fields are required."}), 400
@@ -188,7 +203,13 @@ def register():
             (first_name, surname, email, role, hash_password(password))
         )
         conn.commit()
-        return jsonify({"success": True, "message": "Account created successfully."})
+        user = conn.execute("SELECT user_id FROM Users WHERE email=?", (email,)).fetchone()
+        return jsonify({
+            "success": True,
+            "user_id": user["user_id"],
+            "name":    first_name + " " + surname,
+            "role":    role
+        })
     except sqlite3.IntegrityError:
         return jsonify({"success": False, "message": "An account with that email already exists."}), 409
     finally:
@@ -198,7 +219,7 @@ def register():
 @app.route("/login", methods=["POST"])
 def login():
     d        = request.json
-    email    = d.get("email", "").strip().lower()
+    email    = d.get("email",    "").strip().lower()
     password = d.get("password", "")
 
     if not email or not password:
@@ -220,6 +241,7 @@ def login():
         "user_id":    user["user_id"],
         "first_name": user["first_name"],
         "surname":    user["surname"],
+        "name":       user["first_name"] + " " + user["surname"],
         "email":      user["email"],
         "role":       user["role"]
     })
@@ -246,37 +268,35 @@ def me():
     conn.close()
     if not user:
         return jsonify({"error": "User not found"}), 404
-    return jsonify(dict(user))
+    row       = dict(user)
+    row["name"] = row["first_name"] + " " + row["surname"]
+    return jsonify(row)
 
+
+# ──────────────────────────────────────────────
+#  ROOMS
+# ──────────────────────────────────────────────
 
 @app.route("/rooms", methods=["GET"])
 def get_rooms():
     conn  = connect_db()
-    rooms = conn.execute("SELECT * FROM Rooms ORDER BY CAST(room_number AS INTEGER)").fetchall()
+    rooms = conn.execute(
+        "SELECT * FROM Rooms ORDER BY CAST(room_number AS INTEGER)"
+    ).fetchall()
     conn.close()
-    return jsonify([dict(r) for r in rooms])
+    return jsonify({"rooms": [dict(r) for r in rooms]})
 
 
-@app.route("/rooms/stats", methods=["GET"])
-def rooms_stats():
-    uid = session.get("user_id")
-    if not uid:
-        return jsonify({"error": "Not logged in"}), 401
+@app.route("/rooms/search", methods=["GET"])
+def search_rooms():
+    q    = request.args.get("q", "").strip()
     conn = connect_db()
-    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
-    if role != "Manager":
-        conn.close()
-        return jsonify({"error": "Manager access required"}), 403
-    rows = conn.execute("""
-        SELECT r.room_id, r.room_number, r.floor, r.status,
-               COALESCE(rs.total_issues, 0) AS total_issues,
-               rs.last_reported_issue
-        FROM Rooms r
-        LEFT JOIN RoomStatus rs ON rs.room_id = r.room_id
-        ORDER BY CAST(r.room_number AS INTEGER)
-    """).fetchall()
+    rows = conn.execute(
+        "SELECT * FROM Rooms WHERE room_number LIKE ? ORDER BY CAST(room_number AS INTEGER) LIMIT 10",
+        (f"%{q}%",)
+    ).fetchall()
     conn.close()
-    return jsonify([dict(r) for r in rows])
+    return jsonify({"rooms": [dict(r) for r in rows]})
 
 
 @app.route("/rooms", methods=["POST"])
@@ -341,6 +361,10 @@ def delete_room(rid):
     return jsonify({"success": True})
 
 
+# ──────────────────────────────────────────────
+#  FAULT REPORTING  (Guests AND Staff can submit)
+# ──────────────────────────────────────────────
+
 @app.route("/report-fault", methods=["POST"])
 def report_fault():
     d   = request.json
@@ -348,10 +372,11 @@ def report_fault():
     if not uid:
         return jsonify({"success": False, "message": "Not logged in"}), 401
 
-    room        = d.get("room", d.get("room_number", "")).strip()
-    title       = d.get("title", d.get("issue", "")).strip()
+    # Accept room number (text) directly — no FK to Rooms needed
+    room        = str(d.get("room", d.get("room_number", ""))).strip()
+    title       = d.get("title",       "").strip()
     description = d.get("description", "").strip()
-    priority    = d.get("priority", "").strip()
+    priority    = d.get("priority",    "").strip()
 
     if not all([room, title, description, priority]):
         return jsonify({"success": False, "message": "All fields are required."}), 400
@@ -360,21 +385,24 @@ def report_fault():
         return jsonify({"success": False, "message": "Invalid priority."}), 400
 
     conn = connect_db()
+    # Make sure the room exists in the Rooms table (insert if not)
     conn.execute("INSERT OR IGNORE INTO Rooms(room_number) VALUES(?)", (room,))
     conn.commit()
 
-    conn.execute("""
-        INSERT INTO requests(room, title, description, priority, user_id, status)
-        VALUES (?,?,?,?,?,'Reported')
-    """, (room, title, description, priority, uid))
+    conn.execute(
+        "INSERT INTO requests(room, title, description, priority, user_id, status) VALUES(?,?,?,?,?,'Reported')",
+        (room, title, description, priority, uid)
+    )
     conn.commit()
-
     req_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
+    # Update RoomStatus
     room_row = conn.execute("SELECT room_id FROM Rooms WHERE room_number=?", (room,)).fetchone()
     if room_row:
-        existing_rs = conn.execute("SELECT room_status_id FROM RoomStatus WHERE room_id=?", (room_row["room_id"],)).fetchone()
-        if existing_rs:
+        existing = conn.execute(
+            "SELECT room_status_id FROM RoomStatus WHERE room_id=?", (room_row["room_id"],)
+        ).fetchone()
+        if existing:
             conn.execute(
                 "UPDATE RoomStatus SET total_issues=total_issues+1, last_reported_issue=CURRENT_TIMESTAMP WHERE room_id=?",
                 (room_row["room_id"],)
@@ -386,8 +414,10 @@ def report_fault():
             )
         conn.commit()
 
+    # Notify reporter
     notify(uid, req_id, f"Your fault report for Room {room} has been received. Reference: #{req_id}", "Confirmation")
 
+    # Notify all managers of high-priority faults
     if priority == "High":
         managers = conn.execute("SELECT user_id FROM Users WHERE role='Manager'").fetchall()
         for m in managers:
@@ -398,14 +428,24 @@ def report_fault():
     return jsonify({"success": True, "request_id": req_id})
 
 
+# ──────────────────────────────────────────────
+#  REQUESTS
+# ──────────────────────────────────────────────
+
 @app.route("/requests", methods=["GET"])
 def get_requests():
     uid = session.get("user_id")
     if not uid:
+        uid = request.args.get("user_id")
+    if not uid:
         return jsonify({"error": "Not logged in"}), 401
 
     conn = connect_db()
-    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    role_row = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()
+    if not role_row:
+        conn.close()
+        return jsonify({"error": "User not found"}), 404
+    role = role_row["role"]
 
     if role == "Manager":
         rows = conn.execute("""
@@ -429,6 +469,7 @@ def get_requests():
             ORDER BY req.id DESC
         """, (uid,)).fetchall()
     else:
+        # Guest — own requests only
         rows = conn.execute("""
             SELECT req.*,
                    u.first_name||' '||u.surname AS reporter_name,
@@ -450,6 +491,10 @@ def get_requests():
     return jsonify(result)
 
 
+# ──────────────────────────────────────────────
+#  ASSIGN  (Manager AND Staff only)
+# ──────────────────────────────────────────────
+
 @app.route("/requests/<int:rid>/assign", methods=["PUT"])
 def assign_request(rid):
     uid = session.get("user_id")
@@ -457,16 +502,19 @@ def assign_request(rid):
         return jsonify({"error": "Not logged in"}), 401
     conn = connect_db()
     role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
-    if role != "Manager":
+    if role not in ("Manager", "Staff"):
         conn.close()
-        return jsonify({"error": "Manager access required"}), 403
+        return jsonify({"error": "Manager or Staff access required"}), 403
 
     assigned_to = request.json.get("assigned_to")
     if not assigned_to:
         conn.close()
         return jsonify({"error": "Please select a person to assign to"}), 400
 
-    conn.execute("UPDATE requests SET assigned_to=?, status='In Progress' WHERE id=?", (assigned_to, rid))
+    conn.execute(
+        "UPDATE requests SET assigned_to=?, status='In Progress' WHERE id=?",
+        (assigned_to, rid)
+    )
     conn.commit()
 
     req = conn.execute("SELECT title, room, user_id FROM requests WHERE id=?", (rid,)).fetchone()
@@ -479,6 +527,10 @@ def assign_request(rid):
     return jsonify({"success": True})
 
 
+# ──────────────────────────────────────────────
+#  STATUS UPDATE  (Staff and Subcontractor)
+# ──────────────────────────────────────────────
+
 @app.route("/requests/<int:rid>/status", methods=["PUT"])
 def update_status(rid):
     uid = session.get("user_id")
@@ -487,21 +539,28 @@ def update_status(rid):
 
     new_status = request.json.get("status", "").strip()
     if new_status not in ("In Progress", "Completed"):
-        return jsonify({"error": "Invalid status"}), 400
+        return jsonify({"error": "Invalid status. Use 'In Progress' or 'Completed'."}), 400
 
     conn = connect_db()
     conn.execute("UPDATE requests SET status=? WHERE id=?", (new_status, rid))
     conn.commit()
 
     if new_status == "Completed":
-        req = conn.execute("SELECT title, room, user_id FROM requests WHERE id=?", (rid,)).fetchone()
+        req = conn.execute(
+            "SELECT title, room, user_id FROM requests WHERE id=?", (rid,)
+        ).fetchone()
         if req:
             notify(req["user_id"], rid,
                    f"Your maintenance request for Room {req['room']} ({req['title']}) has been completed.",
                    "Completed")
-            room_row = conn.execute("SELECT room_id FROM Rooms WHERE room_number=?", (req["room"],)).fetchone()
+            # Mark room as Available again
+            room_row = conn.execute(
+                "SELECT room_id FROM Rooms WHERE room_number=?", (req["room"],)
+            ).fetchone()
             if room_row:
-                conn.execute("UPDATE Rooms SET status='Available' WHERE room_id=?", (room_row["room_id"],))
+                conn.execute(
+                    "UPDATE Rooms SET status='Available' WHERE room_id=?", (room_row["room_id"],)
+                )
                 conn.commit()
 
     conn.close()
@@ -509,22 +568,30 @@ def update_status(rid):
     return jsonify({"success": True})
 
 
+# ──────────────────────────────────────────────
+#  STAFF / SUBCONTRACTOR LIST  (for assign dropdowns)
+# ──────────────────────────────────────────────
+
 @app.route("/staff", methods=["GET"])
 def get_staff():
     uid = session.get("user_id")
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
-    conn = connect_db()
-    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
-    if role != "Manager":
+    conn   = connect_db()
+    role   = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    if role not in ("Manager", "Staff"):
         conn.close()
-        return jsonify({"error": "Manager access required"}), 403
+        return jsonify({"error": "Access denied"}), 403
     rows = conn.execute(
         "SELECT user_id, first_name, surname, role FROM Users WHERE role IN ('Staff','Subcontractor') ORDER BY role, first_name"
     ).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
 
+
+# ──────────────────────────────────────────────
+#  FEEDBACK
+# ──────────────────────────────────────────────
 
 @app.route("/feedback", methods=["POST"])
 def submit_feedback():
@@ -542,7 +609,7 @@ def submit_feedback():
         return jsonify({"error": "Rating must be between 1 and 5"}), 400
 
     conn = connect_db()
-    req = conn.execute("SELECT status FROM requests WHERE id=?", (request_id,)).fetchone()
+    req  = conn.execute("SELECT status FROM requests WHERE id=?", (request_id,)).fetchone()
     if not req or req["status"] != "Completed":
         conn.close()
         return jsonify({"error": "Feedback can only be submitted for completed requests"}), 400
@@ -576,8 +643,8 @@ def get_feedback():
             SELECT f.*, u.first_name||' '||u.surname AS guest_name,
                    req.title, req.room AS room_number
             FROM Feedback f
-            JOIN Users u   ON u.user_id   = f.user_id
-            JOIN requests req ON req.id   = f.request_id
+            JOIN Users    u   ON u.user_id   = f.user_id
+            JOIN requests req ON req.id       = f.request_id
             ORDER BY f.created_at DESC
         """).fetchall()
     else:
@@ -593,22 +660,24 @@ def get_feedback():
     return jsonify([dict(r) for r in rows])
 
 
+# ──────────────────────────────────────────────
+#  NOTIFICATIONS
+# ──────────────────────────────────────────────
+
 @app.route("/notifications", methods=["GET"])
 def get_notifications():
     uid = session.get("user_id")
     if not uid:
+        uid = request.args.get("user_id")
+    if not uid:
         return jsonify({"error": "Not logged in"}), 401
     conn = connect_db()
     rows = conn.execute(
-        "SELECT * FROM Notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 30", (uid,)
+        "SELECT * FROM Notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 30",
+        (uid,)
     ).fetchall()
     conn.close()
-    result = []
-    for r in rows:
-        row = dict(r)
-        row["sent_time"] = row.get("created_at")
-        result.append(row)
-    return jsonify(result)
+    return jsonify({"notifications": [dict(r) for r in rows]})
 
 
 @app.route("/notifications/read", methods=["PUT"])
@@ -622,6 +691,10 @@ def mark_read():
     conn.close()
     return jsonify({"success": True})
 
+
+# ──────────────────────────────────────────────
+#  ANALYTICS  (Manager only)
+# ──────────────────────────────────────────────
 
 @app.route("/analytics", methods=["GET"])
 def analytics():
@@ -671,7 +744,7 @@ def analytics():
 
     staff_perf = conn.execute("""
         SELECT u.user_id, u.first_name||' '||u.surname AS name, u.role,
-               COUNT(r.id)                                          AS total,
+               COUNT(r.id) AS total,
                SUM(CASE WHEN r.status='Completed'   THEN 1 ELSE 0 END) AS done,
                SUM(CASE WHEN r.status='In Progress' THEN 1 ELSE 0 END) AS active
         FROM Users u
@@ -686,8 +759,8 @@ def analytics():
                ROUND(AVG(f.rating),1)       AS avg_rating,
                COUNT(*)                     AS review_count
         FROM Feedback f
-        JOIN requests req ON req.id        = f.request_id
-        JOIN Users u      ON u.user_id     = req.assigned_to
+        JOIN requests req ON req.id       = f.request_id
+        JOIN Users    u   ON u.user_id    = req.assigned_to
         WHERE req.assigned_to IS NOT NULL
         GROUP BY req.assigned_to
     """).fetchall()
@@ -711,4 +784,7 @@ def analytics():
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    print("\n  Luxury Lanes server starting...")
+    print("  Open your browser and use Live Server (port 5500)")
+    print("  or open the HTML files directly.\n")
+    app.run(debug=True, port=5000)

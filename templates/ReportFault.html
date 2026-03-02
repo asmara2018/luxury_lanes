@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report a Fault - Luxury Lanes</title>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+body{background:#CFFDFF;min-height:100vh;display:flex}
+
+.sidebar{width:220px;min-height:100vh;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,.08);display:flex;flex-direction:column}
+.sidebar-brand{text-align:center;padding:28px 20px;border-bottom:1px solid #e8f4f4}
+.sidebar-brand h2{font-family:Georgia,serif;font-size:20px;font-weight:700}
+.sidebar-brand p{font-size:12px;color:#888;margin-top:4px}
+.nav-links{list-style:none;flex:1}
+.nav-link{display:block;padding:13px 24px;text-decoration:none;font-size:14px;font-weight:600;color:#555;border-left:3px solid transparent;transition:.18s}
+.nav-link:hover,.nav-link.active{background:#f0faff;color:#3578e5;border-left:3px solid #3578e5}
+.sidebar-footer{padding:18px;border-top:1px solid #e8f4f4}
+.btn-logout{width:100%;padding:10px;border:2px solid #e05252;background:#fff;color:#e05252;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
+.btn-logout:hover{background:#e05252;color:#fff}
+
+.main{flex:1;display:flex;justify-content:center;align-items:center;padding:40px}
+.card{background:#fff;border-radius:16px;padding:35px;width:100%;max-width:600px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+
+h1{font-family:Georgia,serif;font-size:22px;margin-bottom:8px}
+.subtitle{font-size:13px;color:#777;margin-bottom:25px}
+
+.form-group{margin-bottom:18px}
+label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#555}
+input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px}
+textarea{resize:vertical;min-height:100px}
+
+button{width:100%;padding:12px;border:none;border-radius:8px;background:#3578e5;color:#fff;font-weight:600;cursor:pointer;font-size:14px}
+button:hover{opacity:.9}
+
+.return-link{display:block;text-align:center;margin-top:18px;font-size:13px;text-decoration:none;color:#3578e5;font-weight:600}
+.return-link:hover{text-decoration:underline}
+
+.message{margin-top:15px;font-size:13px;text-align:center}
+.success{color:green}
+.error{color:red}
+</style>
+</head>
+
+<body>
+
+<aside class="sidebar">
+<div class="sidebar-brand">
+<h2>Luxury Lanes</h2>
+<p id="sbRole">Loading...</p>
+</div>
+<ul class="nav-links" id="navLinks"></ul>
+<div class="sidebar-footer">
+<button class="btn-logout" onclick="logout()">Log Out</button>
+</div>
+</aside>
+
+<main class="main">
+
+<div class="card">
+<h1>Report a Fault</h1>
+<p class="subtitle">Submit a maintenance issue below</p>
+
+<form id="faultForm" enctype="multipart/form-data">
+<div class="form-group">
+<label>Room Number</label>
+<input type="text" id="room" required>
+</div>
+
+<div class="form-group">
+<label>Issue Description</label>
+<textarea id="issue" required></textarea>
+</div>
+
+<div class="form-group">
+<label>Priority</label>
+<select id="priority">
+<option value="Low">Low</option>
+<option value="Medium">Medium</option>
+<option value="High">High</option>
+</select>
+</div>
+
+<div class="form-group">
+<label>Attach File (Optional)</label>
+<input type="file" id="file">
+</div>
+
+<button type="submit">Submit Request</button>
+
+<div id="message" class="message"></div>
+</form>
+
+<a href="Dashboard.html" class="return-link">Return to Dashboard</a>
+
+</div>
+
+</main>
+
+<script>
+var NAV_LINKS={
+Guest:[
+{label:'Dashboard',href:'Dashboard.html'},
+{label:'Report a Fault',href:'ReportFault.html'},
+{label:'My Requests',href:'ViewRequests.html'},
+{label:'Analytics',href:'Analytics.html'},
+{label:'Feedback',href:'Feedback.html'},
+{label:'Notifications',href:'Notifications.html'}
+],
+Staff:[
+{label:'Dashboard',href:'Dashboard.html'},
+{label:'Report a Fault',href:'ReportFault.html'},
+{label:'My Tasks',href:'ViewRequests.html'},
+{label:'Assign a Job',href:'ManageRequests.html'},
+{label:'Analytics',href:'Analytics.html'},
+{label:'Notifications',href:'Notifications.html'}
+],
+Manager:[
+{label:'Dashboard',href:'Dashboard.html'},
+{label:'All Requests',href:'ViewRequests.html'},
+{label:'Assign a Job',href:'ManageRequests.html'},
+{label:'Manage Rooms',href:'ManageRooms.html'},
+{label:'Analytics',href:'Analytics.html'},
+{label:'Feedback',href:'Feedback.html'},
+{label:'Notifications',href:'Notifications.html'}
+],
+Subcontractor:[
+{label:'Dashboard',href:'Dashboard.html'},
+{label:'My Jobs',href:'ViewRequests.html'},
+{label:'Update Status',href:'ManageRequests.html'},
+{label:'Analytics',href:'Analytics.html'},
+{label:'Notifications',href:'Notifications.html'}
+]
+};
+
+function initNav(currentPage){
+var roleRaw=localStorage.getItem("role")||"Guest";
+var role=roleRaw.toLowerCase();
+var cleanRole="Guest";
+if(role.includes("staff")) cleanRole="Staff";
+if(role.includes("manager")) cleanRole="Manager";
+if(role.includes("sub")) cleanRole="Subcontractor";
+document.getElementById("sbRole").textContent=cleanRole;
+var links=NAV_LINKS[cleanRole];
+document.getElementById("navLinks").innerHTML=links.map(function(l){
+var active=l.href===currentPage?" active":"";
+return '<li><a href="'+l.href+'" class="nav-link'+active+'">'+l.label+'</a></li>';
+}).join("");
+}
+
+function logout(){
+localStorage.clear();
+window.location.href="Login.html";
+}
+
+document.getElementById("faultForm").addEventListener("submit",function(e){
+e.preventDefault();
+document.getElementById("message").innerHTML='<div class="success">Request submitted successfully</div>';
+this.reset();
+});
+
+initNav("ReportFault.html");
+</script>
+
+</body>
+</html>

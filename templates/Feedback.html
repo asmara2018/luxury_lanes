@@ -1,206 +1,37 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Feedback - Luxury Lanes</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif;}
-body{background:#CFFDFF;min-height:100vh;display:flex;}
-.sidebar{width:220px;min-height:100vh;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,.08);display:flex;flex-direction:column;flex-shrink:0;position:sticky;top:0;height:100vh;overflow-y:auto;}
-.sb-brand{text-align:center;padding:26px 20px 20px;border-bottom:1px solid #e8f4f4;}
-.sb-brand h2{font-family:Georgia,serif;font-size:19px;font-weight:700;color:#1a1a1a;}
-.sb-brand p{font-size:12px;color:#888;margin-top:4px;}
-.nav-links{list-style:none;margin-top:12px;flex:1;}
-.nav-links li a{display:flex;align-items:center;gap:11px;padding:12px 22px;text-decoration:none;font-size:14px;font-weight:600;color:#555;border-left:3px solid transparent;transition:all .18s;}
-.nav-links li a:hover,.nav-links li a.active{background:#f0faff;color:#3578e5;border-left:3px solid #3578e5;}
-.sb-foot{padding:16px 20px;border-top:1px solid #e8f4f4;}
-.btn-logout{width:100%;padding:9px;background:#fff;border:2px solid #e05252;color:#e05252;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;}
-.btn-logout:hover{background:#e05252;color:#fff;}
-.main{flex:1;padding:32px 36px;overflow-y:auto;}
-.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:26px;}
-.topbar h1{font-family:Georgia,serif;font-size:22px;font-weight:700;color:#1a1a1a;}
-.topbar p{font-size:13px;color:#777;margin-top:3px;}
-.ubadge{background:#fff;border-radius:12px;padding:9px 16px;display:flex;align-items:center;gap:9px;box-shadow:0 2px 10px rgba(0,0,0,.08);}
-.avatar{width:34px;height:34px;border-radius:50%;background:#3578e5;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;}
-.ubadge strong{display:block;font-size:13px;color:#1a1a1a;}
-.ubadge span{font-size:11px;color:#888;}
-.layout{display:grid;grid-template-columns:380px 1fr;gap:20px;}
-.card{background:#fff;border-radius:14px;padding:24px 26px;box-shadow:0 4px 18px rgba(0,0,0,.07);}
-.card h2{font-size:15px;font-weight:700;color:#1a1a1a;margin-bottom:14px;padding-bottom:10px;border-bottom:2px solid #f0f0f0;}
-.fg{margin-bottom:14px;}
-.fg label{display:block;font-size:13px;font-weight:bold;margin-bottom:5px;color:#1a1a1a;}
-.fg select,.fg textarea{width:100%;padding:9px 11px;border:1px solid #ccc;border-radius:10px;font-size:14px;outline:none;background:#fff;transition:border-color .2s,box-shadow .2s;font-family:Arial,sans-serif;}
-.fg textarea{resize:vertical;min-height:90px;}
-.fg select:focus,.fg textarea:focus{border-color:#4da6ff;box-shadow:0 0 0 3px rgba(77,166,255,.2);}
-.stars{display:flex;gap:6px;margin-bottom:4px;}
-.star{font-size:30px;cursor:pointer;color:#ccc;transition:color .15s;user-select:none;}
-.star.lit{color:#f0a500;}
-.btn{display:block;width:100%;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:bold;cursor:pointer;transition:background .18s;}
-.btn-p{background:#3578e5;color:#fff;}.btn-p:hover{background:#2860c5;}.btn-p:disabled{background:#a0b8d8;cursor:not-allowed;}
-.banner{display:none;padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:12px;}
-.be{background:#fde8e8;color:#c0392b;border-left:4px solid #e05252;}
-.bs{background:#e6f9f0;color:#1e8449;border-left:4px solid #27ae60;}
-table{width:100%;border-collapse:collapse;font-size:13px;}
-thead th{text-align:left;padding:9px 12px;color:#999;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;border-bottom:2px solid #f0f0f0;}
-tbody tr{border-bottom:1px solid #f8f8f8;}
-tbody tr:hover{background:#f5fdff;}
-tbody td{padding:10px 12px;color:#333;vertical-align:middle;}
-.te{text-align:center;color:#bbb;padding:26px;font-size:13px;}
-.star-disp{color:#f0a500;font-size:14px;}
-.info-box{background:#f0faff;border:1px solid #b3d9f5;border-radius:10px;padding:12px 16px;font-size:13px;color:#2471a3;margin-bottom:14px;}
-@media(max-width:1000px){.layout{grid-template-columns:1fr;}}
-@media(max-width:640px){.sidebar{display:none;}.main{padding:16px;}}
+*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
+body{display:flex;background:#CFFDFF;min-height:100vh}
+.sidebar{width:220px;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,0.08);display:flex;flex-direction:column}
+.sidebar h2{text-align:center;padding:25px 0;font-family:Georgia}
+.nav-links{list-style:none;flex:1}
+.nav-link{display:block;padding:14px 24px;text-decoration:none;color:#555;font-weight:600;border-left:3px solid transparent}
+.nav-link:hover,.nav-link.active{background:#f0faff;color:#3578e5;border-left:3px solid #3578e5}
+.main{flex:1;padding:40px}
+.card{background:#fff;padding:20px;border-radius:12px;margin-bottom:15px;box-shadow:0 4px 15px rgba(0,0,0,0.08)}
+.rating{color:#f5a623;font-weight:700}
 </style>
 </head>
+
 <body>
+
 <aside class="sidebar">
-  <div class="sb-brand"><h2>Luxury Lanes</h2><p id="sbRole">Loading...</p></div>
-  <ul class="nav-links" id="navLinks"></ul>
-  <div class="sb-foot"><button class="btn-logout" onclick="logout()">Log Out</button></div>
+<h2>Luxury Lanes</h2>
+<ul class="nav-links">
+<li><a href="/dashboard" class="nav-link">Dashboard</a></li>
+<li><a href="/assign-job" class="nav-link">Assign Job</a></li>
+<li><a href="/notifications" class="nav-link">Notifications</a></li>
+<li><a href="/analytics" class="nav-link">Analytics</a></li>
+<li><a href="/feedback" class="nav-link active">Feedback</a></li>
+</ul>
 </aside>
+
 <main class="main">
-  <div class="topbar">
-    <div><h1>Feedback</h1><p id="pageSubtitle">Rate your maintenance experience</p></div>
-    <div class="ubadge">
-      <div class="avatar" id="avatarInit">?</div>
-      <div><strong id="badgeName">Loading...</strong><span id="badgeRole">-</span></div>
-    </div>
-  </div>
-  <div class="layout">
-    <div id="submitSection">
-      <div class="card">
-        <h2>Submit Feedback</h2>
-        <div id="banner" class="banner"></div>
-        <div class="info-box">Only completed maintenance requests can receive feedback.</div>
-        <div class="fg">
-          <label>Select Request</label>
-          <select id="reqSel"><option value="">Loading your completed requests...</option></select>
-        </div>
-        <div class="fg">
-          <label>Star Rating</label>
-          <div class="stars" id="stars">
-            <span class="star" onclick="setRating(1)">&#9733;</span>
-            <span class="star" onclick="setRating(2)">&#9733;</span>
-            <span class="star" onclick="setRating(3)">&#9733;</span>
-            <span class="star" onclick="setRating(4)">&#9733;</span>
-            <span class="star" onclick="setRating(5)">&#9733;</span>
-          </div>
-        </div>
-        <div class="fg">
-          <label>Comments <span style="font-weight:normal;color:#aaa;font-size:12px;">(optional)</span></label>
-          <textarea id="comments" placeholder="Tell us about your experience..."></textarea>
-        </div>
-        <button class="btn btn-p" id="submitBtn" onclick="submitFeedback()">Submit Feedback</button>
-      </div>
-    </div>
-    <div class="card">
-      <h2 id="listTitle">Feedback History</h2>
-      <table id="fbTableWrap">
-        <thead id="fbHead"><tr><th>Request</th><th>Room</th><th>Rating</th><th>Comments</th><th>Date</th></tr></thead>
-        <tbody id="fbTable"><tr><td colspan="5" class="te">Loading...</td></tr></tbody>
-      </table>
-    </div>
-  </div>
-</main>
-<script>
-var API='http://127.0.0.1:5000';
-var CU={};var selectedRating=0;
-var NAV={
-  Guest:[{l:'Dashboard',h:'Dashboard.html'},{l:'Report Fault',h:'ReportFault.html'},{l:'My Requests',h:'ViewRequests.html'},{l:'Feedback',h:'Feedback.html'},{l:'Notifications',h:'Notifications.html'}],
-  Manager:[{l:'Dashboard',h:'Dashboard.html'},{l:'All Requests',h:'ViewRequests.html'},{l:'Manage Requests',h:'ManageRequests.html'},{l:'Manage Rooms',h:'ManageRooms.html'},{l:'Analytics',h:'Analytics.html'},{l:'Feedback',h:'Feedback.html'},{l:'Notifications',h:'Notifications.html'}],
-  Staff:[{l:'Dashboard',h:'Dashboard.html'},{l:'My Tasks',h:'ViewRequests.html'},{l:'Update Status',h:'ManageRequests.html'},{l:'Report Fault',h:'ReportFault.html'},{l:'Notifications',h:'Notifications.html'}],
-  Subcontractor:[{l:'Dashboard',h:'Dashboard.html'},{l:'My Jobs',h:'ViewRequests.html'},{l:'Update Status',h:'ManageRequests.html'},{l:'Notifications',h:'Notifications.html'}]
-};
-function logout(){if(!confirm('Are you sure you want to log out?'))return;fetch(API+'/logout',{method:'POST',credentials:'include'}).finally(function(){window.location.href='Login.html';});}
-function showB(msg,t){var e=document.getElementById('banner');e.textContent=msg;e.className='banner '+t;e.style.display='block';if(t==='bs')setTimeout(function(){e.style.display='none';},5000);}
-function starsHtml(n){var s='';for(var i=0;i<5;i++)s+=(i<n?'&#9733;':'&#9734;');return '<span class="star-disp">'+s+'</span>';}
-function fmtDate(d){return d?d.slice(0,10):'-';}
-function setRating(n){
-  selectedRating=n;
-  document.querySelectorAll('.star').forEach(function(s,i){if(i<n)s.classList.add('lit');else s.classList.remove('lit');});
-}
-window.onload=function(){
-  fetch(API+'/me',{credentials:'include'})
-  .then(function(r){if(r.status===401){window.location.href='Login.html';return Promise.reject();}return r.json();})
-  .then(function(u){
-    CU=u;
-    document.getElementById('sbRole').textContent=u.role;
-    var links=NAV[u.role]||NAV['Guest'];
-    document.getElementById('navLinks').innerHTML=links.map(function(l){return '<li><a href="'+l.h+'" class="'+(l.h==='Feedback.html'?'active':'')+'">'+l.l+'</a></li>';}).join('');
-    document.getElementById('badgeName').textContent=u.first_name+' '+u.surname;
-    document.getElementById('badgeRole').textContent=u.role;
-    document.getElementById('avatarInit').textContent=u.first_name.charAt(0).toUpperCase();
-    if(u.role!=='Guest'){
-      document.getElementById('submitSection').style.display='none';
-      document.getElementById('pageSubtitle').textContent='All guest feedback';
-      document.getElementById('listTitle').textContent='All Feedback';
-      document.getElementById('fbHead').innerHTML='<tr><th>Guest</th><th>Request</th><th>Room</th><th>Rating</th><th>Comments</th><th>Date</th></tr>';
-    } else {
-      loadCompletedRequests();
-    }
-    loadFeedback();
-  }).catch(function(){});
-};
-function loadCompletedRequests(){
-  fetch(API+'/requests',{credentials:'include'})
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var completed=data.filter(function(r){return r.status==='Completed';});
-    var sel=document.getElementById('reqSel');
-    if(!completed.length){sel.innerHTML='<option value="">No completed requests yet</option>';return;}
-    sel.innerHTML='<option value="">Select a request...</option>'+completed.map(function(r){
-      return '<option value="'+r.request_id+'">#'+r.request_id+' Room '+r.room_number+' - '+r.title+'</option>';
-    }).join('');
-    var id=new URLSearchParams(window.location.search).get('id');
-    if(id)sel.value=id;
-  });
-}
-function loadFeedback(){
-  fetch(API+'/feedback',{credentials:'include'})
-  .then(function(r){return r.json();})
-  .then(function(data){
-    var tb=document.getElementById('fbTable');
-    if(!data.length){tb.innerHTML='<tr><td colspan="'+(CU.role!=='Guest'?6:5)+'" class="te">No feedback submitted yet.</td></tr>';return;}
-    if(CU.role!=='Guest'){
-      tb.innerHTML=data.map(function(f){
-        return '<tr><td><strong>'+f.guest_name+'</strong></td><td>#'+f.request_id+' - '+f.title+'</td>'
-          +'<td>Room '+f.room_number+'</td><td>'+starsHtml(f.rating)+' ('+f.rating+'/5)</td>'
-          +'<td style="font-size:12px;color:#555;">'+(f.comments||'-')+'</td>'
-          +'<td>'+fmtDate(f.created_at)+'</td></tr>';
-      }).join('');
-    } else {
-      tb.innerHTML=data.map(function(f){
-        return '<tr><td>#'+f.request_id+' - '+f.title+'</td><td>Room '+f.room_number+'</td>'
-          +'<td>'+starsHtml(f.rating)+' ('+f.rating+'/5)</td>'
-          +'<td style="font-size:12px;color:#555;">'+(f.comments||'-')+'</td>'
-          +'<td>'+fmtDate(f.created_at)+'</td></tr>';
-      }).join('');
-    }
-  }).catch(function(){document.getElementById('fbTable').innerHTML='<tr><td colspan="5" class="te">Could not load feedback.</td></tr>';});
-}
-function submitFeedback(){
-  var rid=document.getElementById('reqSel').value;
-  var btn=document.getElementById('submitBtn');
-  if(!rid){showB('Please select a request.','be');return;}
-  if(!selectedRating){showB('Please select a star rating.','be');return;}
-  var comments=document.getElementById('comments').value.trim();
-  btn.disabled=true;btn.textContent='Submitting...';
-  fetch(API+'/feedback',{method:'POST',credentials:'include',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({request_id:parseInt(rid),rating:selectedRating,comments:comments})})
-  .then(function(r){return r.json().then(function(d){return{s:r.status,d:d};});})
-  .then(function(res){
-    if(res.s===201){
-      showB('Thank you for your feedback!','bs');
-      selectedRating=0;
-      document.querySelectorAll('.star').forEach(function(s){s.classList.remove('lit');});
-      document.getElementById('comments').value='';
-      document.getElementById('reqSel').value='';
-      loadFeedback();
-    } else {showB(res.d.error||'Submission failed.','be');}
-    btn.disabled=false;btn.textContent='Submit Feedback';
-  }).catch(function(){showB('Cannot connect to server.','be');btn.disabled=false;btn.textContent='Submit Feedback';});
-}
-</script>
-</body>
-</html>
+
+<h1 style="margin-bottom:25px;">Customer Feedback</h1>
+
+
