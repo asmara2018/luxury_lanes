@@ -6,7 +6,7 @@
 <title>Report a Fault - Luxury Lanes</title>
 
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
+{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
 body{background:#CFFDFF;min-height:100vh;display:flex}
 
 .sidebar{width:220px;min-height:100vh;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,.08);display:flex;flex-direction:column}
@@ -48,13 +48,22 @@ button:hover{opacity:.9}
 <aside class="sidebar">
 <div class="sidebar-brand">
 <h2>Luxury Lanes</h2>
-<p id="sbRole">Loading...</p>
+<nav class="nav-links">
+<a href="Dashboard.html" class="current">Dashboard</a>
+<a href="ReportFault.html" class="nav-link">Report Fault</a>
+<a href="AssignJob.html" class="nav-link">Assign Jobs</a>
+<a href="Analytics.html" class="nav-link">Analytics</a>
+<a href="Notifications.html" class="nav-link">Notifications</a>
+<a href="Feedback.html" class="navlink" >Feedback</a>
+</nav>
 </div>
 <ul class="nav-links" id="navLinks"></ul>
 <div class="sidebar-footer">
 <button class="btn-logout" onclick="logout()">Log Out</button>
 </div>
 </aside>
+
+
 
 <main class="main">
 
@@ -92,76 +101,11 @@ button:hover{opacity:.9}
 <div id="message" class="message"></div>
 </form>
 
+<nav>
 <a href="Dashboard.html" class="return-link">Return to Dashboard</a>
+<nav/>
 
 </div>
 
 </main>
 
-<script>
-var NAV_LINKS={
-Guest:[
-{label:'Dashboard',href:'Dashboard.html'},
-{label:'Report a Fault',href:'ReportFault.html'},
-{label:'My Requests',href:'ViewRequests.html'},
-{label:'Analytics',href:'Analytics.html'},
-{label:'Feedback',href:'Feedback.html'},
-{label:'Notifications',href:'Notifications.html'}
-],
-Staff:[
-{label:'Dashboard',href:'Dashboard.html'},
-{label:'Report a Fault',href:'ReportFault.html'},
-{label:'My Tasks',href:'ViewRequests.html'},
-{label:'Assign a Job',href:'ManageRequests.html'},
-{label:'Analytics',href:'Analytics.html'},
-{label:'Notifications',href:'Notifications.html'}
-],
-Manager:[
-{label:'Dashboard',href:'Dashboard.html'},
-{label:'All Requests',href:'ViewRequests.html'},
-{label:'Assign a Job',href:'ManageRequests.html'},
-{label:'Manage Rooms',href:'ManageRooms.html'},
-{label:'Analytics',href:'Analytics.html'},
-{label:'Feedback',href:'Feedback.html'},
-{label:'Notifications',href:'Notifications.html'}
-],
-Subcontractor:[
-{label:'Dashboard',href:'Dashboard.html'},
-{label:'My Jobs',href:'ViewRequests.html'},
-{label:'Update Status',href:'ManageRequests.html'},
-{label:'Analytics',href:'Analytics.html'},
-{label:'Notifications',href:'Notifications.html'}
-]
-};
-
-function initNav(currentPage){
-var roleRaw=localStorage.getItem("role")||"Guest";
-var role=roleRaw.toLowerCase();
-var cleanRole="Guest";
-if(role.includes("staff")) cleanRole="Staff";
-if(role.includes("manager")) cleanRole="Manager";
-if(role.includes("sub")) cleanRole="Subcontractor";
-document.getElementById("sbRole").textContent=cleanRole;
-var links=NAV_LINKS[cleanRole];
-document.getElementById("navLinks").innerHTML=links.map(function(l){
-var active=l.href===currentPage?" active":"";
-return '<li><a href="'+l.href+'" class="nav-link'+active+'">'+l.label+'</a></li>';
-}).join("");
-}
-
-function logout(){
-localStorage.clear();
-window.location.href="Login.html";
-}
-
-document.getElementById("faultForm").addEventListener("submit",function(e){
-e.preventDefault();
-document.getElementById("message").innerHTML='<div class="success">Request submitted successfully</div>';
-this.reset();
-});
-
-initNav("ReportFault.html");
-</script>
-
-</body>
-</html>

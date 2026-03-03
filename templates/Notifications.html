@@ -1,10 +1,146 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Title</title>
+<meta charset="UTF-8">
+<title>Luxury Lanes - Notifications</title>
+
+<style>
+/* ================= GLOBAL ================= */
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body{
+  display:flex;
+  min-height:100vh;
+  background:#f4f7fb;
+}
+
+/* ================= SIDEBAR ================= */
+.sidebar{
+  width:240px;
+  background:#ffffff;
+  padding:25px;
+  box-shadow:2px 0 15px rgba(0,0,0,0.06);
+}
+
+.sidebar h2{
+  font-family: Georgia, serif;
+  text-align:center;
+  margin-bottom:30px;
+}
+
+.nav{
+  list-style:none;
+}
+
+.nav li{
+  margin-bottom:8px;
+}
+
+.nav-link{
+  display:block;
+  text-decoration:none;
+  color:#333;
+  padding:12px;
+  border-radius:8px;
+  font-weight:600;
+  transition:0.2s;
+}
+
+.nav-link:hover{
+  background:#2c7be5;
+  color:white;
+}
+
+.nav-link.active{
+  background:#2c7be5;
+  color:white;
+}
+
+/* ================= CONTENT ================= */
+.main-content{
+  flex:1;
+  padding:40px;
+}
+
+.page-title{
+  font-size:26px;
+  font-weight:600;
+  margin-bottom:20px;
+}
+
+.notification-card{
+  background:white;
+  padding:20px;
+  border-radius:12px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.05);
+  margin-bottom:15px;
+}
+
+.notification-title{
+  font-weight:600;
+  margin-bottom:5px;
+}
+
+.notification-time{
+  font-size:12px;
+  color:#777;
+}
+</style>
 </head>
+
 <body>
+
+<!-- ================= SIDEBAR ================= -->
+<div class="sidebar">
+  <h2>Luxury Lanes</h2>
+
+  <ul class="nav">
+    <li><a href="Dashboard.html" class="nav-link">Dashboard</a></li>
+    <li><a href="Analytics.html" class="nav-link">Analytics</a></li>
+    <li><a href="Feedback.html" class="nav-link">Feedback</a></li>
+    <li><a href="Notifications.html" class="nav-link active">Notifications</a></li>
+    <li><a href="#" class="nav-link">Bookings</a></li>
+    <li><a href="#" class="nav-link">Profile</a></li>
+    <li><a href="#" class="nav-link">Settings</a></li>
+    <li><a href="#" class="nav-link" onclick="logout()">Logout</a></li>
+  </ul>
+</div>
+
+<!-- ================= MAIN CONTENT ================= -->
+<div class="main-content">
+  <div class="page-title">Notifications</div>
+
+  <div class="notification-card">
+    <div class="notification-title">New Booking Received</div>
+    <div>You have received a new lane booking for tonight at 7:00 PM.</div>
+    <div class="notification-time">5 minutes ago</div>
+  </div>
+
+  <div class="notification-card">
+    <div class="notification-title">Feedback Submitted</div>
+    <div>A customer has submitted new feedback.</div>
+    <div class="notification-time">1 hour ago</div>
+  </div>
+
+  <div class="notification-card">
+    <div class="notification-title">System Update</div>
+    <div>The system will undergo maintenance this Sunday.</div>
+    <div class="notification-time">Yesterday</div>
+  </div>
+
+</div>
+
+<script>
+function logout(){
+  localStorage.clear();
+  window.location.href="Login.html";
+}
+</script>
 
 </body>
 </html>
