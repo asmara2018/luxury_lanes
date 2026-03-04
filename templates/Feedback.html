@@ -1,37 +1,193 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Feedback - Luxury Lanes</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Arial}
-body{display:flex;background:#CFFDFF;min-height:100vh}
-.sidebar{width:220px;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,0.08);display:flex;flex-direction:column}
-.sidebar h2{text-align:center;padding:25px 0;font-family:Georgia}
-.nav-links{list-style:none;flex:1}
-.nav-link{display:block;padding:14px 24px;text-decoration:none;color:#555;font-weight:600;border-left:3px solid transparent}
-.nav-link:hover,.nav-link.active{background:#f0faff;color:#3578e5;border-left:3px solid #3578e5}
-.main{flex:1;padding:40px}
-.card{background:#fff;padding:20px;border-radius:12px;margin-bottom:15px;box-shadow:0 4px 15px rgba(0,0,0,0.08)}
-.rating{color:#f5a623;font-weight:700}
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.5">
+<title>Maintenance Dashboard</title>
 </head>
+<style>
 
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Segoe UI, sans-serif;
+}
+
+body {
+    display: flex;
+    min-height: 100vh;
+    background: #CFFDFF;
+}
+
+.nav-panel {
+    width: 240px;
+    background: #1f2937;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+}
+
+.nav-panel h2 {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.nav-links {
+    flex: 1;
+}
+
+.nav-links a {
+    display: block;
+    padding: 15px 25px;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.nav-links a:hover {
+    background: #374151;
+    color: white;
+}
+
+.nav-links a.current {
+    background: #2563eb;
+    color: white;
+}
+
+.nav-bottom {
+    padding: 15px 25px;
+    border-top: 1px solid #374151;
+}
+
+.nav-bottom a {
+    display: block;
+    padding: 10px 0;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.nav-bottom a:hover {
+    color: white;
+}
+
+.content-area {
+    flex: 1;
+    padding: 30px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    font-size: 22px;
+}
+
+.page-header p {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.staff-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.85);
+}
+
+.staff-initial {
+    width: 32px;
+    height: 32px;
+    background: #2563eb;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.fault-log {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    max-width: 650px;
+}
+
+.fault-log h3 {
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: Segoe UI, sans-serif;
+    outline: none;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.submit-btn:hover {
+    opacity: 0.9;
+}
+</style>
 <body>
-
-<aside class="sidebar">
+<h1>Customer Feedback</h1>
 <h2>Luxury Lanes</h2>
-<ul class="nav-links">
-<li><a href="/dashboard" class="nav-link">Dashboard</a></li>
-<li><a href="/assign-job" class="nav-link">Assign Job</a></li>
-<li><a href="/notifications" class="nav-link">Notifications</a></li>
-<li><a href="Analytics.html" class="nav-link">Analytics</a></li>
-<li><a href="/feedback" class="nav-link active">Feedback</a></li>
-</ul>
-</aside>
-
-<main class="main">
-
-<h1 style="margin-bottom:25px;">Customer Feedback</h1>
+<nav class="nav-links">
+<a href="/dashboard" class="nav-link">Dashboard</a>
+<a href="/assign-job" class="nav-link">Assign Job</a>
+<a href="/notifications" class="nav-link">Notifications</a>
+<a href="Analytics.html" class="nav-link">Analytics</a>
+<a href="/feedback" class="nav-link active">Feedback</a>
+</nav>
+</body>
 
 

@@ -2,110 +2,254 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Report a Fault - Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.5">
+<title>Report Fault - Luxury Lanes</title>
 
 <style>
-{margin:0;padding:0;box-sizing:border-box;font-family:Arial,sans-serif}
-body{background:#CFFDFF;min-height:100vh;display:flex}
 
-.sidebar{width:220px;min-height:100vh;background:#fff;box-shadow:3px 0 15px rgba(0,0,0,.08);display:flex;flex-direction:column}
-.sidebar-brand{text-align:center;padding:28px 20px;border-bottom:1px solid #e8f4f4}
-.sidebar-brand h2{font-family:Georgia,serif;font-size:20px;font-weight:700}
-.sidebar-brand p{font-size:12px;color:#888;margin-top:4px}
-.nav-links{list-style:none;flex:1}
-.nav-link{display:block;padding:13px 24px;text-decoration:none;font-size:14px;font-weight:600;color:#555;border-left:3px solid transparent;transition:.18s}
-.nav-link:hover,.nav-link.active{background:#f0faff;color:#3578e5;border-left:3px solid #3578e5}
-.sidebar-footer{padding:18px;border-top:1px solid #e8f4f4}
-.btn-logout{width:100%;padding:10px;border:2px solid #e05252;background:#fff;color:#e05252;border-radius:8px;font-weight:600;cursor:pointer;font-size:13px}
-.btn-logout:hover{background:#e05252;color:#fff}
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: Segoe UI, sans-serif;
+}
 
-.main{flex:1;display:flex;justify-content:center;align-items:center;padding:40px}
-.card{background:#fff;border-radius:16px;padding:35px;width:100%;max-width:600px;box-shadow:0 6px 20px rgba(0,0,0,.08)}
+body {
+    display: flex;
+    min-height: 100vh;
+    background: #CFFDFF;
+}
 
-h1{font-family:Georgia,serif;font-size:22px;margin-bottom:8px}
-.subtitle{font-size:13px;color:#777;margin-bottom:25px}
+.nav-panel {
+    width: 240px;
+    background: #1f2937;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    padding-top: 20px;
+}
 
-.form-group{margin-bottom:18px}
-label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:#555}
-input,select,textarea{width:100%;padding:10px;border:1px solid #ddd;border-radius:8px;font-size:14px}
-textarea{resize:vertical;min-height:100px}
+.nav-panel h2 {
+    text-align: center;
+    margin-bottom: 30px;
+}
 
-button{width:100%;padding:12px;border:none;border-radius:8px;background:#3578e5;color:#fff;font-weight:600;cursor:pointer;font-size:14px}
-button:hover{opacity:.9}
+.nav-links {
+    flex: 1;
+}
 
-.return-link{display:block;text-align:center;margin-top:18px;font-size:13px;text-decoration:none;color:#3578e5;font-weight:600}
-.return-link:hover{text-decoration:underline}
+.nav-links a {
+    display: block;
+    padding: 15px 25px;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 14px;
+    transition: 0.2s;
+}
 
-.message{margin-top:15px;font-size:13px;text-align:center}
-.success{color:green}
-.error{color:red}
+.nav-links a:hover {
+    background: #374151;
+    color: white;
+}
+
+.nav-links a.current {
+    background: #2563eb;
+    color: white;
+}
+
+.nav-bottom {
+    padding: 15px 25px;
+    border-top: 1px solid #374151;
+}
+
+.nav-bottom a {
+    display: block;
+    padding: 10px 0;
+    color: #cbd5e1;
+    text-decoration: none;
+    font-size: 14px;
+    transition: 0.2s;
+}
+
+.nav-bottom a:hover {
+    color: white;
+}
+
+.content-area {
+    flex: 1;
+    padding: 30px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+}
+
+.page-header h1 {
+    font-size: 22px;
+}
+
+.page-header p {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 4px;
+}
+
+.staff-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 20px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.85);
+}
+
+.staff-initial {
+    width: 32px;
+    height: 32px;
+    background: #2563eb;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.fault-log {
+    background: white;
+    padding: 25px;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+    max-width: 650px;
+}
+
+.fault-log h3 {
+    margin-bottom: 20px;
+    font-size: 16px;
+}
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 5px;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: Segoe UI, sans-serif;
+    outline: none;
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 12px;
+    background: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+}
+
+.submit-btn:hover {
+    opacity: 0.9;
+}
+
 </style>
 </head>
 
 <body>
 
-<aside class="sidebar">
-<div class="sidebar-brand">
-<h2>Luxury Lanes</h2>
-<nav class="nav-links">
-<a href="Dashboard.html" class="current">Dashboard</a>
-<a href="ReportFault.html" class="nav-link">Report Fault</a>
-<a href="AssignJob.html" class="nav-link">Assign Jobs</a>
-<a href="Analytics.html" class="nav-link">Analytics</a>
-<a href="Notifications.html" class="nav-link">Notifications</a>
-<a href="Feedback.html" class="navlink" >Feedback</a>
-</nav>
-</div>
-<ul class="nav-links" id="navLinks"></ul>
-<div class="sidebar-footer">
-<button class="btn-logout" onclick="logout()">Log Out</button>
-</div>
+<aside class="nav-panel">
+    <h2>Luxury Lanes</h2>
+
+    <nav class="nav-links">
+        <a href="Dashboard.html">Dashboard</a>
+        <a href="ReportFault.html" class="current">Report Fault</a>
+        <a href="AssignJob.html">Assign Jobs</a>
+        <a href="Analytics.html">Analytics</a>
+        <a href="Notifications.html">Notifications</a>
+        <a href="Feedback.html">Feedback</a>
+    </nav>
+
+    <div class="nav-bottom">
+        <a href="login.html">Log Out</a>
+    </div>
 </aside>
 
+<main class="content-area">
 
+    <div class="page-header">
+        <div>
+            <h1>Report a Fault</h1>
+            <p>Submit a new maintenance request</p>
+        </div>
+        <div class="staff-info">
+            <div class="staff-initial">M</div>
+            <span>Manager</span>
+        </div>
+    </div>
 
-<main class="main">
+    <div class="fault-log">
+        <h3>New Fault Report</h3>
 
-<div class="card">
-<h1>Report a Fault</h1>
-<p class="subtitle">Submit a maintenance issue below</p>
+        <div class="form-group">
+            <label for="room">Room Number</label>
+            <input type="text" id="room" placeholder="e.g. 101">
+        </div>
 
-<form id="faultForm" enctype="multipart/form-data">
-<div class="form-group">
-<label>Room Number</label>
-<input type="text" id="room" required>
-</div>
+        <div class="form-group">
+            <label for="title">Issue Title</label>
+            <input type="text" id="title" placeholder="e.g. Broken air conditioning">
+        </div>
 
-<div class="form-group">
-<label>Issue Description</label>
-<textarea id="issue" required></textarea>
-</div>
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" placeholder="Describe the fault in detail..."></textarea>
+        </div>
 
-<div class="form-group">
-<label>Priority</label>
-<select id="priority">
-<option value="Low">Low</option>
-<option value="Medium">Medium</option>
-<option value="High">High</option>
-</select>
-</div>
+        <div class="form-group">
+            <label for="priority">Priority</label>
+            <select id="priority">
+                <option value="Low">Low</option>
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+            </select>
+        </div>
 
-<div class="form-group">
-<label>Attach File (Optional)</label>
-<input type="file" id="file">
-</div>
+        <div class="form-group">
+            <label for="attachment">Attach File (Optional)</label>
+            <input type="file" id="attachment" accept="image/*,.pdf">
+        </div>
 
-<button type="submit">Submit Request</button>
+        <button class="submit-btn">Submit Fault Report</button>
 
-<div id="message" class="message"></div>
-</form>
-
-<nav>
-<a href="Dashboard.html" class="return-link">Return to Dashboard</a>
-<nav/>
-
-</div>
+    </div>
 
 </main>
 
+</body>
+</html>
