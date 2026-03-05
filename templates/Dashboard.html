@@ -1,24 +1,24 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.5">
-<title>Maintenance Dashboard</title>
+<title>Feedback-Luxury Lanes</title>
+<link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
 
 <body>
-
 <aside class="nav-panel">
-<h2>Luxury Lanes</h2>
+    <h2>Luxury Lanes</h2>
 
 <nav class="nav-links">
 <a href="Dashboard.html" class="current">Dashboard</a>
 <a href="ReportFault.html">Report Fault</a>
 <a href="AssignJob.html">Assign Jobs</a>
+<a href="View Requests.html">View Requests</a>
 <a href="Analytics.html">Analytics</a>
-<a href="Notifications.html">Notifications</a>
-<a href="Feedback.html">Feedback</a>
+<a href="Notifications.html" >Notifications</a>
+<a href="Feedback.html" >Feedback</a>
 </nav>
 
 <div class="nav-bottom">
@@ -28,60 +28,81 @@
 
 <main class="content-area">
 
-<div class="page-header">
-<div>
-<h1 id="pageTitle">Dashboard Overview</h1>
-<p>Maintenance Management System</p>
-</div>
+    <div class="page-header">
+        <div>
+            <h1>Dashboard Overview</h1>
+            <p>Maintenance Management System</p>
+        </div>
+        <div class="staff-info">
+            <div class="staff-initial" id="userInitial">M</div>
+            <span id="userName">Manager</span>
+        </div>
+    </div>
 
-<div class="staff-info">
-<span id="staffName">Manager</span>
-</div>
-</div>
+    <section class="request-summary">
+        <div class="summary-tile">
+            <p>Total Requests</p>
+            <h2>-</h2>
+        </div>
+        <div class="summary-tile tile-urgent">
+            <p>High Priority</p>
+            <h2>-</h2>
+        </div>
+        <div class="summary-tile tile-active">
+            <p>In Progress</p>
+            <h2>-</h2>
+        </div>
+        <div class="summary-tile tile-resolved">
+            <p>Completed</p>
+            <h2>-</h2>
+        </div>
+    </section>
 
-<section id="summaryPanel" class="request-summary">
-<div class="summary-tile">
-<p>Total Requests</p>
-<h2>24</h2>
-</div>
-
-<div class="summary-tile tile-urgent">
-<p>High Priority</p>
-<h2>6</h2>
-</div>
-
-<div class="summary-tile tile-active">
-<p>In Progress</p>
-<h2>10</h2>
-</div>
-
-<div class="summary-tile tile-resolved">
-<p>Completed</p>
-<h2>8</h2>
-</div>
-</section>
-
-<div class="fault-log">
-<h3>Recent Maintenance Requests</h3>
-
-<table id="faultTable">
-<thead>
-<tr>
-<th>ID</th>
-<th>Room</th>
-<th>Priority</th>
-<th>Status</th>
-<th>Assigned</th>
-<th>Date</th>
-</tr>
-</thead>
-
-
-
-</div>
+    <div class="fault-log">
+        <h3>Recent Maintenance Requests</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Room</th>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>#1</td>
+                    <td>Room 101</td>
+                    <td>Broken air conditioning</td>
+                    <td><span class="priority-tag priority-urgent">High</span></td>
+                    <td>In Progress</td>
+                    <td>2025-03-01</td>
+                </tr>
+                <tr>
+                    <td>#2</td>
+                    <td>Room 204</td>
+                    <td>Leaking tap</td>
+                    <td><span class="priority-tag priority-standard">Medium</span></td>
+                    <td>Reported</td>
+                    <td>2025-03-02</td>
+                </tr>
+                <tr>
+                    <td>#3</td>
+                    <td>Room 310</td>
+                    <td>Broken lamp</td>
+                    <td><span class="priority-tag priority-minor">Low</span></td>
+                    <td>Completed</td>
+                    <td>2025-03-03</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
 </main>
 
+<script src="nav.js"></script>
+<script>buildNav('Dashboard.html');</script>
 </body>
 </html>
-

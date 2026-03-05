@@ -2,27 +2,37 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.5">
-<title>Feedback-Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Report Fault - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
+<style>
+.fault-log      { max-width:620px; }
+.form-group     { margin-bottom:16px; }
+.form-group label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:5px; }
+.form-group input,
+.form-group select,
+.form-group textarea { width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:Segoe UI,sans-serif; outline:none; }
+.form-group textarea { resize:vertical; min-height:110px; }
+.submit-btn { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
+.submit-btn:hover { opacity:0.9; }
+</style>
 </head>
-
 <body>
+
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-
-<nav class="nav-links">
-<a href="Dashboard.html">Dashboard</a>
+    <nav class="nav-links">
+<a href="Dashboard.html" >Dashboard</a>
 <a href="ReportFault.html" class="current">Report Fault</a>
 <a href="AssignJob.html">Assign Jobs</a>
+<a href="View Requests.html">View Requests</a>
 <a href="Analytics.html">Analytics</a>
-<a href="Notifications.html">Notifications</a>
+<a href="Notifications.html" >Notifications</a>
 <a href="Feedback.html" >Feedback</a>
 </nav>
-
-<div class="nav-bottom">
-<a href="login.html">Log Out</a>
-</div>
+    <div class="nav-bottom">
+        <a href="Login.html">Log Out</a>
+    </div>
 </aside>
 
 <main class="content-area">
@@ -30,28 +40,29 @@
     <div class="page-header">
         <div>
             <h1>Report Fault</h1>
-            <p>Submit you mantenance requests and we will repsond promptly</p>
+            <p>Submit a maintenance request and we will respond promptly</p>
+        </div>
+        <div class="staff-info">
+            <div class="staff-initial" id="userInitial">M</div>
+            <span id="userName">Manager</span>
         </div>
     </div>
 
     <div class="fault-log">
         <h3>New Fault Report</h3>
-
+        <br>
         <div class="form-group">
             <label for="room">Room Number</label>
             <input type="text" id="room" placeholder="e.g. 101">
         </div>
-
         <div class="form-group">
             <label for="title">Issue Title</label>
             <input type="text" id="title" placeholder="e.g. Broken air conditioning">
         </div>
-
         <div class="form-group">
             <label for="description">Description</label>
             <textarea id="description" placeholder="Describe the fault in detail..."></textarea>
         </div>
-
         <div class="form-group">
             <label for="priority">Priority</label>
             <select id="priority">
@@ -60,17 +71,12 @@
                 <option value="High">High</option>
             </select>
         </div>
-
-        <div class="form-group">
-            <label for="attachment">Attach File (Optional)</label>
-            <input type="file" id="attachment" accept="image/*,.pdf">
-        </div>
-
         <button class="submit-btn">Submit Fault Report</button>
-
     </div>
 
 </main>
 
+<script src="nav.js"></script>
+<script>buildNav('ReportFault.html');</script>
 </body>
 </html>
