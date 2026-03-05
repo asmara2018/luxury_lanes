@@ -7,43 +7,42 @@
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <style>
-.charts-row       { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:22px; }
-.chart-card       { background:white; border-radius:10px; padding:22px; box-shadow:0 3px 10px rgba(0,0,0,0.07); }
-.chart-card h3    { font-size:13px; color:#374151; margin-bottom:16px; font-weight:600; }
-.chart-wrap       { position:relative; height:230px; }
-.chart-wide       { background:white; border-radius:10px; padding:22px; box-shadow:0 3px 10px rgba(0,0,0,0.07); margin-bottom:22px; }
-.chart-wide h3    { font-size:13px; color:#374151; margin-bottom:16px; font-weight:600; }
-.chart-wide-wrap  { position:relative; height:200px; }
+.charts-row      { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:22px; }
+.chart-card      { background:white; border-radius:10px; padding:22px; box-shadow:0 3px 10px rgba(0,0,0,0.07); }
+.chart-card h3   { font-size:13px; color:#374151; margin-bottom:16px; font-weight:600; }
+.chart-wrap      { position:relative; height:230px; }
+.chart-wide      { background:white; border-radius:10px; padding:22px; box-shadow:0 3px 10px rgba(0,0,0,0.07); margin-bottom:22px; }
+.chart-wide h3   { font-size:13px; color:#374151; margin-bottom:16px; font-weight:600; }
+.chart-wide-wrap { position:relative; height:200px; }
 </style>
 </head>
-
 <body>
 
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
     <nav class="nav-links">
-<a href="Dashboard.html" >Dashboard</a>
-<a href="ReportFault.html">Report Fault</a>
-<a href="AssignJob.html">Assign Jobs</a>
-<a href="View Requests.html">View Requests</a>
-<a href="Analytics.html"class="current">Analytics</a>
-<a href="Notifications.html" >Notifications</a>
-<a href="Feedback.html" >Feedback</a>
-</nav>
+        <a href="Dashboard.html">Dashboard</a>
+        <a href="ReportFault.html">Report Fault</a>
+        <a href="AssignJob.html" class="current">Assign Jobs</a>
+        <a href="View Requests.html">View Requests</a>
+        <a href="Analytics.html">Analytics</a>
+        <a href="Notifications.html">Notifications</a>
+        <a href="Feedback.html" >Feedback</a>
+    </nav>
     <div class="nav-bottom">
         <a href="Login.html">Log Out</a>
     </div>
 </aside>
 
 <main class="content-area">
-
     <div class="page-header">
         <div>
             <h1>Performance Analytics</h1>
             <p>Live overview of all maintenance activity</p>
         </div>
         <div class="staff-info">
-            <span id="userName">Manager</span>
+            <div class="staff-initial" id="userInitial">?</div>
+            <span id="userName">Loading...</span>
         </div>
     </div>
 
@@ -65,111 +64,67 @@
 
     <div class="chart-wide">
         <h3>Detailed Performance Metrics</h3>
-        <table style="width:100%; border-collapse:collapse;">
+        <table style="width:100%;border-collapse:collapse;">
             <thead>
-                <tr style="background:#1f2937; color:white;">
-                    <th style="padding:12px 16px; text-align:left;">Metric</th>
-                    <th style="padding:12px 16px; text-align:left;">Value</th>
+                <tr style="background:#1f2937;color:white;">
+                    <th style="padding:12px 16px;text-align:left;">Metric</th>
+                    <th style="padding:12px 16px;text-align:left;">Value</th>
                 </tr>
             </thead>
             <tbody>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">Average Completion Time</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="avgTime">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">Median Completion Time</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="medianTime">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">On-Time Rate</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="onTime">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">Repeat Issue Rate</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="repeatRate">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">SLA Breaches</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="slaBreaches">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">Escalation Rate</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="escalationRate">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">Data Quality Score</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="dataQuality">-</td>
-                </tr>
-                <tr style="border-bottom:1px solid #f1f5f9;">
-                    <td style="padding:12px 16px; font-size:14px;">Average Rating</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="avgRating">-</td>
-                </tr>
-                <tr>
-                    <td style="padding:12px 16px; font-size:14px;">Performance Index</td>
-                    <td style="padding:12px 16px; font-size:14px;" id="perfIndex">-</td>
-                </tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">Average Completion Time</td><td style="padding:12px 16px;font-size:14px;" id="avgTime">-</td></tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">Median Completion Time</td><td style="padding:12px 16px;font-size:14px;" id="medianTime">-</td></tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">On-Time Rate (within 48hrs)</td><td style="padding:12px 16px;font-size:14px;" id="onTime">-</td></tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">Repeat Issue Rate</td><td style="padding:12px 16px;font-size:14px;" id="repeatRate">-</td></tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">SLA Breaches</td><td style="padding:12px 16px;font-size:14px;" id="slaBreaches">-</td></tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">Escalation Rate</td><td style="padding:12px 16px;font-size:14px;" id="escalationRate">-</td></tr>
+                <tr style="border-bottom:1px solid #f1f5f9;"><td style="padding:12px 16px;font-size:14px;">Average Guest Rating</td><td style="padding:12px 16px;font-size:14px;" id="avgRating">-</td></tr>
+                <tr><td style="padding:12px 16px;font-size:14px;">Performance Index</td><td style="padding:12px 16px;font-size:14px;" id="perfIndex">-</td></tr>
             </tbody>
         </table>
     </div>
-
 </main>
 
+<script src="nav.js"></script>
 <script>
 var API = 'http://127.0.0.1:5000';
+buildNav('Analytics.html');
 
-var storedName = localStorage.getItem('name') || 'Manager';
-document.getElementById('userName').textContent    = storedName;
-document.getElementById('userInitial').textContent = storedName.charAt(0).toUpperCase();
+function logout() {
+    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
 
-var statusChartInst   = null;
-var priorityChartInst = null;
-var monthlyChartInst  = null;
+var statusChartInst=null, priorityChartInst=null, monthlyChartInst=null;
 
 function makeStatusChart(reported, inProgress, completed) {
-    if (statusChartInst) { statusChartInst.destroy(); }
+    if (statusChartInst) statusChartInst.destroy();
     statusChartInst = new Chart(document.getElementById('statusChart').getContext('2d'), {
         type: 'doughnut',
-        data: {
-            labels: ['Reported', 'In Progress', 'Completed'],
-            datasets: [{ data: [reported, inProgress, completed],
-                backgroundColor: ['#6366f1', '#f59e0b', '#16a34a'],
-                borderWidth: 3, borderColor: '#fff' }]
-        },
-        options: { responsive: true, maintainAspectRatio: false, cutout: '62%',
-            plugins: { legend: { position: 'bottom' } } }
+        data: { labels:['Reported','In Progress','Completed'],
+            datasets:[{data:[reported,inProgress,completed],backgroundColor:['#6366f1','#f59e0b','#16a34a'],borderWidth:3,borderColor:'#fff'}]},
+        options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{position:'bottom'}}}
     });
 }
 
 function makePriorityChart(high, medium, low) {
-    if (priorityChartInst) { priorityChartInst.destroy(); }
+    if (priorityChartInst) priorityChartInst.destroy();
     priorityChartInst = new Chart(document.getElementById('priorityChart').getContext('2d'), {
         type: 'bar',
-        data: {
-            labels: ['High', 'Medium', 'Low'],
-            datasets: [{ data: [high, medium, low],
-                backgroundColor: ['#dc2626', '#f59e0b', '#16a34a'],
-                borderRadius: 6, borderWidth: 0 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+        data: { labels:['High','Medium','Low'],
+            datasets:[{data:[high,medium,low],backgroundColor:['#dc2626','#f59e0b','#16a34a'],borderRadius:6,borderWidth:0}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{grid:{display:false}}}}
     });
 }
 
 function makeMonthlyChart(monthlyData) {
-    if (monthlyChartInst) { monthlyChartInst.destroy(); }
+    if (monthlyChartInst) monthlyChartInst.destroy();
     var sorted = monthlyData.slice().reverse();
     monthlyChartInst = new Chart(document.getElementById('monthlyChart').getContext('2d'), {
         type: 'bar',
-        data: {
-            labels: sorted.map(function(m) { return m.month; }),
-            datasets: [{ data: sorted.map(function(m) { return m.count; }),
-                backgroundColor: '#2563eb', borderRadius: 6, borderWidth: 0 }]
-        },
-        options: { responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: { y: { beginAtZero: true }, x: { grid: { display: false } } } }
+        data: { labels:sorted.map(function(m){return m.month;}),
+            datasets:[{data:sorted.map(function(m){return m.count;}),backgroundColor:'#2563eb',borderRadius:6,borderWidth:0}]},
+        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{y:{beginAtZero:true},x:{grid:{display:false}}}}
     });
 }
 
@@ -177,44 +132,34 @@ function loadAnalytics() {
     fetch(API + '/analytics', { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
+        if (data.error) { return; }
+        makeStatusChart(data.reported||0, data.in_progress||0, data.completed||0);
+        makePriorityChart(data.high||0, data.medium||0, data.low||0);
+        if (data.monthly && data.monthly.length>0) makeMonthlyChart(data.monthly);
 
-        // Charts
-        makeStatusChart(data.reported || 0, data.in_progress || 0, data.completed || 0);
-        makePriorityChart(data.high || 0, data.medium || 0, data.low || 0);
-        if (data.monthly && data.monthly.length > 0) { makeMonthlyChart(data.monthly); }
+        document.getElementById('avgTime').textContent        = data.average_time    != null ? data.average_time+' hrs'    : '-';
+        document.getElementById('medianTime').textContent     = data.median_time     != null ? data.median_time+' hrs'     : '-';
+        document.getElementById('onTime').textContent         = data.on_time_rate    != null ? data.on_time_rate+'%'       : '-';
+        document.getElementById('slaBreaches').textContent    = data.sla_breaches    != null ? data.sla_breaches           : '-';
+        document.getElementById('escalationRate').textContent = data.escalation_rate != null ? data.escalation_rate+'%'   : '-';
+        document.getElementById('avgRating').textContent      = data.avg_rating      != null ? data.avg_rating+' / 5'     : 'No feedback yet';
 
-        // Metrics from backend
-        document.getElementById('avgTime').textContent        = data.average_time     ? data.average_time + ' hrs'  : '-';
-        document.getElementById('medianTime').textContent     = data.median_time      ? data.median_time + ' hrs'   : '-';
-        document.getElementById('onTime').textContent         = data.on_time_rate     ? data.on_time_rate + '%'     : '-';
-        document.getElementById('slaBreaches').textContent    = data.sla_breaches    != null ? data.sla_breaches    : '-';
-        document.getElementById('escalationRate').textContent = data.escalation_rate  ? data.escalation_rate + '%'  : '-';
-
-        // Metrics calculated from existing data
-        var total     = data.total     || 0;
-        var completed = data.completed || 0;
-        var topRooms  = data.top_rooms || [];
-
-        if (total > 0) {
-            var repeated  = topRooms.filter(function(r) { return r.issue_count > 1; }).length;
-            document.getElementById('repeatRate').textContent  = topRooms.length > 0 ? Math.round((repeated / topRooms.length) * 100) + '%' : '-';
-            document.getElementById('dataQuality').textContent = Math.round((completed / total) * 100) + '%';
-            var rating    = data.avg_rating || 0;
-            var perfIndex = Math.round(((completed / total) * 100 * 0.6) + ((rating / 5) * 100 * 0.4));
-            document.getElementById('perfIndex').textContent   = perfIndex + '%';
+        var topRooms = data.top_rooms || [];
+        if (topRooms.length > 0) {
+            var repeated = topRooms.filter(function(r){ return r.issue_count>1; }).length;
+            document.getElementById('repeatRate').textContent = Math.round((repeated/topRooms.length)*100)+'%';
         }
 
-        document.getElementById('avgRating').textContent = data.avg_rating
-            ? Number(data.avg_rating).toFixed(1) + ' / 5'
-            : 'No feedback yet';
+        var total=data.total||0, completed=data.completed||0, rating=data.avg_rating||0;
+        if (total > 0) {
+            document.getElementById('perfIndex').textContent =
+                Math.round(((completed/total)*100*0.6)+((rating/5)*100*0.4))+'%';
+        }
     })
-    .catch(function() {
-        console.log('Could not load analytics. Is Server.py running?');
-    });
+    .catch(function() { console.log('Could not load analytics.'); });
 }
 
 loadAnalytics();
 </script>
-
 </body>
 </html>

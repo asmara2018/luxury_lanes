@@ -2,59 +2,56 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.5">
-<title>Feedback-Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
-
 <body>
+
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-
-<nav class="nav-links">
-<a href="Dashboard.html" class="current">Dashboard</a>
-<a href="ReportFault.html">Report Fault</a>
-<a href="AssignJob.html">Assign Jobs</a>
-<a href="View Requests.html">View Requests</a>
-<a href="Analytics.html">Analytics</a>
-<a href="Notifications.html" >Notifications</a>
-<a href="Feedback.html" >Feedback</a>
-</nav>
-
-<div class="nav-bottom">
-<a href="login.html">Log Out</a>
-</div>
+    <nav class="nav-links">
+        <a href="Dashboard.html" class="current" >Dashboard</a>
+        <a href="ReportFault.html">Report Fault</a>
+        <a href="AssignJob.html">Assign Jobs</a>
+        <a href="View Requests.html">View Requests</a>
+        <a href="Analytics.html">Analytics</a>
+        <a href="Notifications.html">Notifications</a>
+        <a href="Feedback.html" >Feedback</a>
+    </nav>
+    <div class="nav-bottom">
+        <a href="Login.html">Log Out</a>
+    </div>
 </aside>
 
 <main class="content-area">
-
     <div class="page-header">
         <div>
             <h1>Dashboard Overview</h1>
             <p>Maintenance Management System</p>
         </div>
         <div class="staff-info">
-            <div class="staff-initial" id="userInitial">M</div>
-            <span id="userName">Manager</span>
+            <div class="staff-initial" id="userInitial">?</div>
+            <span id="userName">Loading...</span>
         </div>
     </div>
 
     <section class="request-summary">
         <div class="summary-tile">
             <p>Total Requests</p>
-            <h2>-</h2>
+            <h2 id="totalCount">-</h2>
         </div>
         <div class="summary-tile tile-urgent">
             <p>High Priority</p>
-            <h2>-</h2>
+            <h2 id="highCount">-</h2>
         </div>
         <div class="summary-tile tile-active">
             <p>In Progress</p>
-            <h2>-</h2>
+            <h2 id="inProgressCount">-</h2>
         </div>
         <div class="summary-tile tile-resolved">
             <p>Completed</p>
-            <h2>-</h2>
+            <h2 id="completedCount">-</h2>
         </div>
     </section>
 
@@ -63,46 +60,61 @@
         <table>
             <thead>
                 <tr>
-                    <th>ID</th>
-                    <th>Room</th>
-                    <th>Title</th>
-                    <th>Priority</th>
-                    <th>Status</th>
-                    <th>Date</th>
+                    <th>ID</th><th>Room</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th>
                 </tr>
             </thead>
-            <tbody>
-                <tr>
-                    <td>#1</td>
-                    <td>Room 101</td>
-                    <td>Broken air conditioning</td>
-                    <td><span class="priority-tag priority-urgent">High</span></td>
-                    <td>In Progress</td>
-                    <td>2025-03-01</td>
-                </tr>
-                <tr>
-                    <td>#2</td>
-                    <td>Room 204</td>
-                    <td>Leaking tap</td>
-                    <td><span class="priority-tag priority-standard">Medium</span></td>
-                    <td>Reported</td>
-                    <td>2025-03-02</td>
-                </tr>
-                <tr>
-                    <td>#3</td>
-                    <td>Room 310</td>
-                    <td>Broken lamp</td>
-                    <td><span class="priority-tag priority-minor">Low</span></td>
-                    <td>Completed</td>
-                    <td>2025-03-03</td>
-                </tr>
+            <tbody id="recentTable">
+                <tr><td colspan="6" style="padding:14px 0; color:#9ca3af;">Loading...</td></tr>
             </tbody>
         </table>
     </div>
-
 </main>
 
 <script src="nav.js"></script>
-<script>buildNav('Dashboard.html');</script>
+<script>
+var API = 'http://127.0.0.1:5000';
+buildNav('Dashboard.html');
+
+function logout() {
+    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
+
+function priorityClass(p) {
+    if (p === 'High')   return 'priority-tag priority-urgent';
+    if (p === 'Medium') return 'priority-tag priority-standard';
+    return 'priority-tag priority-minor';
+}
+
+function loadDashboard() {
+    fetch(API + '/requests', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!Array.isArray(data)) return;
+        document.getElementById('totalCount').textContent      = data.length;
+        document.getElementById('highCount').textContent       = data.filter(function(r){ return r.priority==='High'; }).length;
+        document.getElementById('inProgressCount').textContent = data.filter(function(r){ return r.status==='In Progress'; }).length;
+        document.getElementById('completedCount').textContent  = data.filter(function(r){ return r.status==='Completed'; }).length;
+
+        var recent = data.slice(0, 10);
+        if (recent.length === 0) {
+            document.getElementById('recentTable').innerHTML = '<tr><td colspan="6" style="padding:14px 0;color:#9ca3af;">No requests yet.</td></tr>';
+            return;
+        }
+        document.getElementById('recentTable').innerHTML = recent.map(function(r) {
+            var date = r.report_time ? r.report_time.split(' ')[0] : '-';
+            return '<tr><td>#'+r.id+'</td><td>Room '+r.room+'</td><td>'+r.title+'</td>' +
+                '<td><span class="'+priorityClass(r.priority)+'">'+r.priority+'</span></td>' +
+                '<td>'+r.status+'</td><td>'+date+'</td></tr>';
+        }).join('');
+    })
+    .catch(function() {
+        document.getElementById('recentTable').innerHTML =
+            '<tr><td colspan="6" style="color:#dc2626;padding:14px 0;">Cannot connect to server. Is Server.py running?</td></tr>';
+    });
+}
+
+loadDashboard();
+</script>
 </body>
 </html>

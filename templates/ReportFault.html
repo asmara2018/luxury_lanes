@@ -6,15 +6,18 @@
 <title>Report Fault - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <style>
-.fault-log      { max-width:620px; }
-.form-group     { margin-bottom:16px; }
+.fault-log        { max-width:620px; }
+.form-group       { margin-bottom:16px; }
 .form-group label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:5px; }
 .form-group input,
 .form-group select,
 .form-group textarea { width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:Segoe UI,sans-serif; outline:none; }
 .form-group textarea { resize:vertical; min-height:110px; }
-.submit-btn { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
-.submit-btn:hover { opacity:0.9; }
+.submit-btn          { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
+.submit-btn:hover    { opacity:0.9; }
+.submit-btn:disabled { opacity:0.6; cursor:default; }
+.ok-msg  { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+.err-msg { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
 </style>
 </head>
 <body>
@@ -22,34 +25,35 @@
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
     <nav class="nav-links">
-<a href="Dashboard.html" >Dashboard</a>
-<a href="ReportFault.html" class="current">Report Fault</a>
-<a href="AssignJob.html">Assign Jobs</a>
-<a href="View Requests.html">View Requests</a>
-<a href="Analytics.html">Analytics</a>
-<a href="Notifications.html" >Notifications</a>
-<a href="Feedback.html" >Feedback</a>
-</nav>
+        <a href="Dashboard.html">Dashboard</a>
+        <a href="ReportFault.html" class="current">Report Fault</a>
+        <a href="AssignJob.html">Assign Jobs</a>
+        <a href="View Requests.html">View Requests</a>
+        <a href="Analytics.html">Analytics</a>
+        <a href="Notifications.html">Notifications</a>
+        <a href="Feedback.html" >Feedback</a>
+    </nav>
     <div class="nav-bottom">
         <a href="Login.html">Log Out</a>
     </div>
 </aside>
 
 <main class="content-area">
-
     <div class="page-header">
         <div>
             <h1>Report Fault</h1>
             <p>Submit a maintenance request and we will respond promptly</p>
         </div>
         <div class="staff-info">
-            <span id="userName">Manager</span>
+            <div class="staff-initial" id="userInitial">?</div>
+            <span id="userName">Loading...</span>
         </div>
     </div>
 
     <div class="fault-log">
-        <h3>New Fault Report</h3>
-        <br>
+        <h3>New Fault Report</h3><br>
+        <div id="okMsg"  class="ok-msg"></div>
+        <div id="errMsg" class="err-msg"></div>
         <div class="form-group">
             <label for="room">Room Number</label>
             <input type="text" id="room" placeholder="e.g. 101">
@@ -70,12 +74,60 @@
                 <option value="High">High</option>
             </select>
         </div>
-        <button class="submit-btn">Submit Fault Report</button>
+        <button class="submit-btn" id="submitBtn" onclick="submitFault()">Submit Fault Report</button>
     </div>
-
 </main>
 
 <script src="nav.js"></script>
-<script>buildNav('ReportFault.html');</script>
+<script>
+var API = 'http://127.0.0.1:5000';
+buildNav('ReportFault.html');
+
+function logout() {
+    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
+
+function submitFault() {
+    var room        = document.getElementById('room').value.trim();
+    var title       = document.getElementById('title').value.trim();
+    var description = document.getElementById('description').value.trim();
+    var priority    = document.getElementById('priority').value;
+    var btn         = document.getElementById('submitBtn');
+
+    document.getElementById('okMsg').style.display  = 'none';
+    document.getElementById('errMsg').style.display = 'none';
+
+    if (!room || !title || !description) { showErr('Please fill in all fields.'); return; }
+
+    btn.disabled = true; btn.textContent = 'Submitting...';
+
+    fetch(API + '/report-fault', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ room: room, title: title, description: description, priority: priority, user_id: localStorage.getItem('user_id') })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showOk('Fault reported successfully. Reference: #' + data.request_id);
+            document.getElementById('room').value = '';
+            document.getElementById('title').value = '';
+            document.getElementById('description').value = '';
+            document.getElementById('priority').value = 'Low';
+        } else {
+            showErr(data.message || 'Could not submit. Please try again.');
+        }
+        btn.disabled = false; btn.textContent = 'Submit Fault Report';
+    })
+    .catch(function() {
+        showErr('Cannot connect to server. Is Server.py running?');
+        btn.disabled = false; btn.textContent = 'Submit Fault Report';
+    });
+}
+
+function showOk(msg) { var e=document.getElementById('okMsg'); e.textContent=msg; e.style.display='block'; }
+function showErr(msg) { var e=document.getElementById('errMsg'); e.textContent=msg; e.style.display='block'; }
+</script>
 </body>
 </html>

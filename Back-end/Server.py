@@ -33,7 +33,7 @@ def hash_password(password):
 def check_password(password, stored):
     parts = stored.split(":")
     if len(parts) != 2:
-        # Legacy plain hash (sha256 with no salt) — used by old all-in-one app
+        # Legacy plain sha256 hash (no salt) — old accounts
         return stored == hashlib.sha256(password.encode()).hexdigest()
     hashed = hashlib.sha256((password + parts[1]).encode()).hexdigest()
     return hashed == parts[0]
@@ -81,7 +81,6 @@ def init_db():
         status      TEXT DEFAULT 'Available'
     )""")
 
-    # requests uses room TEXT (room number directly) and NOT a FK to Rooms
     c.execute("""
     CREATE TABLE IF NOT EXISTS requests (
         id          INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -151,7 +150,7 @@ def init_db():
         FOREIGN KEY(user_id) REFERENCES Users(user_id)
     )""")
 
-    # Seed rooms 101–130 if empty
+    # Seed rooms 101-130 if empty
     if conn.execute("SELECT COUNT(*) FROM Rooms").fetchone()[0] == 0:
         rooms = []
         for i in range(1, 31):
@@ -257,6 +256,7 @@ def logout():
 
 
 @app.route("/me", methods=["GET"])
+@app.route("/api/me", methods=["GET"])
 def me():
     uid = session.get("user_id")
     if not uid:
@@ -268,7 +268,7 @@ def me():
     conn.close()
     if not user:
         return jsonify({"error": "User not found"}), 404
-    row       = dict(user)
+    row         = dict(user)
     row["name"] = row["first_name"] + " " + row["surname"]
     return jsonify(row)
 
@@ -362,7 +362,7 @@ def delete_room(rid):
 
 
 # ──────────────────────────────────────────────
-#  FAULT REPORTING  (Guests AND Staff can submit)
+#  FAULT REPORTING
 # ──────────────────────────────────────────────
 
 @app.route("/report-fault", methods=["POST"])
@@ -372,7 +372,6 @@ def report_fault():
     if not uid:
         return jsonify({"success": False, "message": "Not logged in"}), 401
 
-    # Accept room number (text) directly — no FK to Rooms needed
     room        = str(d.get("room", d.get("room_number", ""))).strip()
     title       = d.get("title",       "").strip()
     description = d.get("description", "").strip()
@@ -385,7 +384,6 @@ def report_fault():
         return jsonify({"success": False, "message": "Invalid priority."}), 400
 
     conn = connect_db()
-    # Make sure the room exists in the Rooms table (insert if not)
     conn.execute("INSERT OR IGNORE INTO Rooms(room_number) VALUES(?)", (room,))
     conn.commit()
 
@@ -396,7 +394,7 @@ def report_fault():
     conn.commit()
     req_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
-    # Update RoomStatus
+    # Update RoomStatus issue count
     room_row = conn.execute("SELECT room_id FROM Rooms WHERE room_number=?", (room,)).fetchone()
     if room_row:
         existing = conn.execute(
@@ -414,10 +412,8 @@ def report_fault():
             )
         conn.commit()
 
-    # Notify reporter
     notify(uid, req_id, f"Your fault report for Room {room} has been received. Reference: #{req_id}", "Confirmation")
 
-    # Notify all managers of high-priority faults
     if priority == "High":
         managers = conn.execute("SELECT user_id FROM Users WHERE role='Manager'").fetchall()
         for m in managers:
@@ -433,6 +429,7 @@ def report_fault():
 # ──────────────────────────────────────────────
 
 @app.route("/requests", methods=["GET"])
+@app.route("/api/requests", methods=["GET"])
 def get_requests():
     uid = session.get("user_id")
     if not uid:
@@ -440,7 +437,7 @@ def get_requests():
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
 
-    conn = connect_db()
+    conn     = connect_db()
     role_row = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()
     if not role_row:
         conn.close()
@@ -484,7 +481,7 @@ def get_requests():
     conn.close()
     result = []
     for r in rows:
-        row = dict(r)
+        row                = dict(r)
         row["request_id"]  = row["id"]
         row["room_number"] = row["room"]
         result.append(row)
@@ -492,7 +489,7 @@ def get_requests():
 
 
 # ──────────────────────────────────────────────
-#  ASSIGN  (Manager AND Staff only)
+#  ASSIGN  (Manager and Staff)
 # ──────────────────────────────────────────────
 
 @app.route("/requests/<int:rid>/assign", methods=["PUT"])
@@ -519,8 +516,11 @@ def assign_request(rid):
 
     req = conn.execute("SELECT title, room, user_id FROM requests WHERE id=?", (rid,)).fetchone()
     if req:
-        notify(assigned_to, rid, f"You have been assigned: '{req['title']}' in Room {req['room']}.", "Assignment")
-        notify(req["user_id"], rid, f"Your request for Room {req['room']} is now In Progress.", "Update")
+        notify(assigned_to, rid,
+               f"You have been assigned: '{req['title']}' in Room {req['room']}.", "Assignment")
+        if req["user_id"]:
+            notify(req["user_id"], rid,
+                   f"Your request for Room {req['room']} is now In Progress.", "Update")
 
     conn.close()
     audit(uid, "ASSIGN", f"Request #{rid} assigned to user {assigned_to}")
@@ -528,7 +528,7 @@ def assign_request(rid):
 
 
 # ──────────────────────────────────────────────
-#  STATUS UPDATE  (Staff and Subcontractor)
+#  STATUS UPDATE
 # ──────────────────────────────────────────────
 
 @app.route("/requests/<int:rid>/status", methods=["PUT"])
@@ -538,8 +538,8 @@ def update_status(rid):
         return jsonify({"error": "Not logged in"}), 401
 
     new_status = request.json.get("status", "").strip()
-    if new_status not in ("In Progress", "Completed"):
-        return jsonify({"error": "Invalid status. Use 'In Progress' or 'Completed'."}), 400
+    if new_status not in ("In Progress", "Completed", "Reported"):
+        return jsonify({"error": "Invalid status. Use Reported, In Progress, or Completed."}), 400
 
     conn = connect_db()
     conn.execute("UPDATE requests SET status=? WHERE id=?", (new_status, rid))
@@ -550,10 +550,10 @@ def update_status(rid):
             "SELECT title, room, user_id FROM requests WHERE id=?", (rid,)
         ).fetchone()
         if req:
-            notify(req["user_id"], rid,
-                   f"Your maintenance request for Room {req['room']} ({req['title']}) has been completed.",
-                   "Completed")
-            # Mark room as Available again
+            if req["user_id"]:
+                notify(req["user_id"], rid,
+                       f"Your maintenance request for Room {req['room']} ({req['title']}) has been completed.",
+                       "Completed")
             room_row = conn.execute(
                 "SELECT room_id FROM Rooms WHERE room_number=?", (req["room"],)
             ).fetchone()
@@ -569,7 +569,7 @@ def update_status(rid):
 
 
 # ──────────────────────────────────────────────
-#  STAFF / SUBCONTRACTOR LIST  (for assign dropdowns)
+#  STAFF LIST  (for assign dropdowns)
 # ──────────────────────────────────────────────
 
 @app.route("/staff", methods=["GET"])
@@ -577,13 +577,13 @@ def get_staff():
     uid = session.get("user_id")
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
-    conn   = connect_db()
-    role   = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
+    conn = connect_db()
+    role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
     if role not in ("Manager", "Staff"):
         conn.close()
         return jsonify({"error": "Access denied"}), 403
     rows = conn.execute(
-        "SELECT user_id, first_name, surname, role FROM Users WHERE role IN ('Staff','Subcontractor') ORDER BY role, first_name"
+        "SELECT user_id, first_name, surname, email, role FROM Users WHERE role IN ('Staff','Subcontractor') ORDER BY role, first_name"
     ).fetchall()
     conn.close()
     return jsonify([dict(r) for r in rows])
@@ -676,8 +676,14 @@ def get_notifications():
         "SELECT * FROM Notifications WHERE user_id=? ORDER BY created_at DESC LIMIT 30",
         (uid,)
     ).fetchall()
+    unread = conn.execute(
+        "SELECT COUNT(*) FROM Notifications WHERE user_id=? AND is_read=0", (uid,)
+    ).fetchone()[0]
     conn.close()
-    return jsonify({"notifications": [dict(r) for r in rows]})
+    return jsonify({
+        "notifications": [dict(r) for r in rows],
+        "unread_count":  unread
+    })
 
 
 @app.route("/notifications/read", methods=["PUT"])
@@ -717,6 +723,51 @@ def analytics():
 
     avg_row    = conn.execute("SELECT ROUND(AVG(rating),1) AS avg_r FROM Feedback").fetchone()
     avg_rating = avg_row["avg_r"] if avg_row["avg_r"] else None
+
+    # Average completion time in hours (between report_time and last status update)
+    # We approximate using the report_time of completed requests vs current time as a floor.
+    # SQLite stores CURRENT_TIMESTAMP as text; julianday() converts it for arithmetic.
+    avg_time_row = conn.execute("""
+        SELECT ROUND(AVG((julianday('now') - julianday(report_time)) * 24), 1) AS avg_hrs
+        FROM requests
+        WHERE status = 'Completed'
+    """).fetchone()
+    avg_completion_time = avg_time_row["avg_hrs"] if avg_time_row["avg_hrs"] else None
+
+    # Median completion time — SQLite has no MEDIAN, so we calculate it manually
+    times = conn.execute("""
+        SELECT ROUND((julianday('now') - julianday(report_time)) * 24, 1) AS hrs
+        FROM requests
+        WHERE status = 'Completed'
+        ORDER BY hrs
+    """).fetchall()
+    median_time = None
+    if times:
+        times_list = [t["hrs"] for t in times]
+        mid        = len(times_list) // 2
+        if len(times_list) % 2 == 0:
+            median_time = round((times_list[mid - 1] + times_list[mid]) / 2, 1)
+        else:
+            median_time = times_list[mid]
+
+    # On-time rate: completed within 48 hours of being reported (reasonable SLA for a hotel)
+    SLA_HOURS = 48
+    on_time_count = conn.execute(f"""
+        SELECT COUNT(*) FROM requests
+        WHERE status = 'Completed'
+        AND (julianday('now') - julianday(report_time)) * 24 <= {SLA_HOURS}
+    """).fetchone()[0]
+    on_time_rate = round((on_time_count / completed * 100), 1) if completed > 0 else None
+
+    # SLA breaches: incomplete requests open longer than SLA_HOURS hours
+    sla_breaches = conn.execute(f"""
+        SELECT COUNT(*) FROM requests
+        WHERE status != 'Completed'
+        AND (julianday('now') - julianday(report_time)) * 24 > {SLA_HOURS}
+    """).fetchone()[0]
+
+    # Escalation rate: percentage of requests that are High priority
+    escalation_rate = round((high / total * 100), 1) if total > 0 else None
 
     top_rooms = conn.execute("""
         SELECT room AS room_number, COUNT(*) AS issue_count
@@ -767,24 +818,29 @@ def analytics():
 
     conn.close()
     return jsonify({
-        "total":             total,
-        "reported":          reported,
-        "in_progress":       in_prog,
-        "completed":         completed,
-        "high":              high,
-        "medium":            medium,
-        "low":               low,
-        "avg_rating":        avg_rating,
-        "top_rooms":         [dict(r) for r in top_rooms],
-        "unresolved":        [dict(r) for r in unresolved],
-        "monthly":           [dict(r) for r in monthly],
-        "staff_performance": [dict(r) for r in staff_perf],
-        "avg_feedback":      [dict(r) for r in avg_feedback]
+        "total":              total,
+        "reported":           reported,
+        "in_progress":        in_prog,
+        "completed":          completed,
+        "high":               high,
+        "medium":             medium,
+        "low":                low,
+        "avg_rating":         avg_rating,
+        "average_time":       avg_completion_time,
+        "median_time":        median_time,
+        "on_time_rate":       on_time_rate,
+        "sla_breaches":       sla_breaches,
+        "escalation_rate":    escalation_rate,
+        "top_rooms":          [dict(r) for r in top_rooms],
+        "unresolved":         [dict(r) for r in unresolved],
+        "monthly":            [dict(r) for r in monthly],
+        "staff_performance":  [dict(r) for r in staff_perf],
+        "avg_feedback":       [dict(r) for r in avg_feedback]
     })
 
 
 if __name__ == "__main__":
     print("\n  Luxury Lanes server starting...")
-    print("  Open your browser and use Live Server (port 5500)")
-    print("  or open the HTML files directly.\n")
+    print("  Open your HTML files directly or use Live Server (port 5500)")
+    print("  API running at http://127.0.0.1:5000\n")
     app.run(debug=True, port=5000)

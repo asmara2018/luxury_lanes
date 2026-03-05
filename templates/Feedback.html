@@ -2,73 +2,206 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.5">
-<title>Feedback-Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Feedback - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
+<style>
+.form-group          { margin-bottom:16px; }
+.form-group label    { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:5px; }
+.form-group select,
+.form-group textarea { width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:Segoe UI,sans-serif; outline:none; }
+.form-group textarea { resize:vertical; min-height:100px; }
+.star-row            { display:flex; gap:8px; margin-top:4px; }
+.star-row input      { display:none; }
+.star-row label      { font-size:28px; color:#d1d5db; cursor:pointer; width:auto; font-weight:normal; margin:0; }
+.star-row input:checked ~ label,
+.star-row label:hover,
+.star-row label:hover ~ label { color:#f59e0b; }
+.submit-btn          { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
+.submit-btn:hover    { opacity:0.9; }
+.submit-btn:disabled { opacity:0.6; cursor:default; }
+.ok-msg  { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+.err-msg { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+</style>
 </head>
-
 <body>
+
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-
-<nav class="nav-links">
-<a href="Dashboard.html" >Dashboard</a>
-<a href="ReportFault.html">Report Fault</a>
-<a href="AssignJob.html">Assign Jobs</a>
-<a href="View Requests.html">View Requests</a>
-<a href="Analytics.html">Analytics</a>
-<a href="Notifications.html" >Notifications</a>
-<a href="Feedback.html" class="current">Feedback</a>
-</nav>
-
-<div class="nav-bottom">
-<a href="login.html">Log Out</a>
-</div>
+    <nav class="nav-links">
+        <a href="Dashboard.html">Dashboard</a>
+        <a href="ReportFault.html">Report Fault</a>
+        <a href="AssignJob.html">Assign Jobs</a>
+        <a href="View Requests.html">View Requests</a>
+        <a href="Analytics.html">Analytics</a>
+        <a href="Notifications.html">Notifications</a>
+        <a href="Feedback.html" class="current">Feedback</a>
+    </nav>
+    <div class="nav-bottom">
+        <a href="Login.html">Log Out</a>
+    </div>
+</aside>
+    <div class="nav-bottom">
+        <a href="Login.html" onclick="logout()">Log Out</a>
+    </div>
 </aside>
 
 <main class="content-area">
-
     <div class="page-header">
         <div>
             <h1>Feedback</h1>
-            <p>Guest Feedback and Ratings</p>
+            <p>Rate a completed maintenance request</p>
+        </div>
+        <div class="staff-info">
+            <div class="staff-initial" id="userInitial">?</div>
+            <span id="userName">Loading...</span>
         </div>
     </div>
 
-    <form action="/submit_feedback" method="POST">
+    <div class="fault-log" style="max-width:560px;margin-bottom:24px;">
+        <h3>Submit Feedback</h3><br>
+        <div id="okMsg"  class="ok-msg"></div>
+        <div id="errMsg" class="err-msg"></div>
+        <div class="form-group">
+            <label for="requestSelect">Completed Request</label>
+            <select id="requestSelect">
+                <option value="">-- Select a completed request --</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Rating</label>
+            <div class="star-row">
+                <input type="radio" name="rating" id="s5" value="5">
+                <input type="radio" name="rating" id="s4" value="4">
+                <input type="radio" name="rating" id="s3" value="3">
+                <input type="radio" name="rating" id="s2" value="2">
+                <input type="radio" name="rating" id="s1" value="1">
+                <label for="s5">&#9733;</label>
+                <label for="s4">&#9733;</label>
+                <label for="s3">&#9733;</label>
+                <label for="s2">&#9733;</label>
+                <label for="s1">&#9733;</label>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="comments">Comments (optional)</label>
+            <textarea id="comments" placeholder="Describe your experience..."></textarea>
+        </div>
+        <button class="submit-btn" id="submitBtn" onclick="submitFeedback()">Submit Feedback</button>
+    </div>
 
-        <label for="request_id">Select your maintenance request:</label>
-        <select name="request_id" id="request_id" required>
-            <option value="">-- Select a request --</option>
-            <option value="1">Room 101 - Leaking tap</option>
-            <option value="2">Room 204 - Broken heater</option>
-        </select>
-
-        <br><br>
-
-        <label>Rating:</label><br>
-        <input type="radio" name="rating" value="1" required> 1 star
-        <input type="radio" name="rating" value="2"> 2 stars
-        <input type="radio" name="rating" value="3"> 3 stars
-        <input type="radio" name="rating" value="4"> 4 stars
-        <input type="radio" name="rating" value="5"> 5 stars
-
-        <br><br>
-
-        <label for="description">Description:</label><br>
-        <textarea name="description" id="description" rows="4" cols="50" placeholder="Describe your experience..." required></textarea>
-
-        <br><br>
-
-        <label for="email">Email (optional - so staff can follow up):</label><br>
-        <input type="email" name="email" id="email" placeholder="your@email.com">
-
-        <br><br>
-
-        <button type="submit">Submit Feedback</button>
-
-    </form>
-
+    <div class="fault-log">
+        <h3 style="margin-bottom:12px;">Previous Feedback</h3>
+        <table>
+            <thead>
+                <tr><th>Request</th><th>Room</th><th>Rating</th><th>Comments</th><th>Date</th></tr>
+            </thead>
+            <tbody id="feedbackTable">
+                <tr><td colspan="5" style="padding:14px 0;color:#9ca3af;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
 </main>
+
+<script src="nav.js"></script>
+<script>
+var API = 'http://127.0.0.1:5000';
+buildNav('Feedback.html');
+
+function logout() {
+    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
+
+function loadCompletedRequests() {
+    fetch(API + '/requests', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!Array.isArray(data)) return;
+        var completed = data.filter(function(r){ return r.status==='Completed'; });
+        var sel = document.getElementById('requestSelect');
+        sel.innerHTML = '<option value="">-- Select a completed request --</option>';
+        if (completed.length === 0) {
+            var opt = document.createElement('option');
+            opt.disabled = true; opt.textContent = 'No completed requests yet';
+            sel.appendChild(opt);
+            return;
+        }
+        completed.forEach(function(r) {
+            var opt = document.createElement('option');
+            opt.value = r.id;
+            opt.textContent = '#'+r.id+' - Room '+r.room+' - '+r.title;
+            sel.appendChild(opt);
+        });
+    });
+}
+
+function loadFeedback() {
+    fetch(API + '/feedback', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        var tbody = document.getElementById('feedbackTable');
+        if (!Array.isArray(data) || data.length===0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="padding:14px 0;color:#9ca3af;">No feedback submitted yet.</td></tr>';
+            return;
+        }
+        tbody.innerHTML = data.map(function(f) {
+            var stars=''; for(var i=0;i<5;i++) stars += i<f.rating ? '&#9733;' : '&#9734;';
+            var date = f.created_at ? f.created_at.split(' ')[0] : '-';
+            return '<tr><td>'+(f.title||'#'+f.request_id)+'</td><td>'+(f.room_number||'-')+'</td>' +
+                '<td style="color:#f59e0b;font-size:16px;">'+stars+'</td>' +
+                '<td style="color:#6b7280;font-size:12px;">'+(f.comments||'&#8212;')+'</td>' +
+                '<td>'+date+'</td></tr>';
+        }).join('');
+    })
+    .catch(function() {
+        document.getElementById('feedbackTable').innerHTML = '<tr><td colspan="5" style="color:#dc2626;padding:14px 0;">Cannot connect to server.</td></tr>';
+    });
+}
+
+function submitFeedback() {
+    var requestId = document.getElementById('requestSelect').value;
+    var ratingEl  = document.querySelector('input[name="rating"]:checked');
+    var comments  = document.getElementById('comments').value.trim();
+    var btn       = document.getElementById('submitBtn');
+
+    document.getElementById('okMsg').style.display  = 'none';
+    document.getElementById('errMsg').style.display = 'none';
+
+    if (!requestId) { showErr('Please select a request.'); return; }
+    if (!ratingEl)  { showErr('Please select a rating.'); return; }
+
+    btn.disabled = true; btn.textContent = 'Submitting...';
+
+    fetch(API + '/feedback', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_id: parseInt(requestId), rating: parseInt(ratingEl.value), comments: comments })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showOk('Thank you — your feedback has been submitted.');
+            document.getElementById('requestSelect').value = '';
+            document.querySelectorAll('input[name="rating"]').forEach(function(el){ el.checked=false; });
+            document.getElementById('comments').value = '';
+            loadFeedback();
+        } else {
+            showErr(data.error || 'Could not submit feedback.');
+        }
+        btn.disabled=false; btn.textContent='Submit Feedback';
+    })
+    .catch(function() {
+        showErr('Cannot connect to server.');
+        btn.disabled=false; btn.textContent='Submit Feedback';
+    });
+}
+
+function showOk(msg) { var e=document.getElementById('okMsg'); e.textContent=msg; e.style.display='block'; }
+function showErr(msg) { var e=document.getElementById('errMsg'); e.textContent=msg; e.style.display='block'; }
+
+loadCompletedRequests();
+loadFeedback();
+</script>
 </body>
 </html>

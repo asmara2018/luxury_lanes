@@ -2,26 +2,214 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.5">
-<title>Feedback-Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>View Requests - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
+<style>
+.filter-bar          { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:center; }
+.filter-bar input    { flex:1; min-width:180px; padding:9px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; font-family:Segoe UI,sans-serif; outline:none; }
+.filter-bar select   { padding:9px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; font-family:Segoe UI,sans-serif; outline:none; background:white; }
+.filter-bar button   { padding:9px 14px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; cursor:pointer; }
+.filter-bar button:hover { background:#e5e7eb; }
+.results-info        { font-size:12px; color:#6b7280; margin-bottom:10px; }
+.status-badge        { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap; }
+.s-reported          { background:#e0e7ff; color:#3730a3; }
+.s-inprogress        { background:#fef3c7; color:#92400e; }
+.s-completed         { background:#d1fae5; color:#065f46; }
+.action-wrap         { display:flex; gap:6px; align-items:center; }
+.action-wrap select  { padding:5px 8px; border:1px solid #e5e7eb; border-radius:6px; font-size:12px; font-family:Segoe UI,sans-serif; outline:none; }
+.save-btn            { padding:5px 10px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer; }
+.save-btn:hover      { opacity:0.88; }
+.ok-msg  { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+.err-msg { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+tbody td { vertical-align:middle; }
+</style>
 </head>
-
 <body>
+
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-
-<nav class="nav-links">
-<a href="Dashboard.html" >Dashboard</a>
-<a href="ReportFault.html">Report Fault</a>
-<a href="AssignJob.html" >Assign Jobs</a>
-<a href="View Requests.html"  class="current">View Requests</a>
-<a href="Analytics.html">Analytics</a>
-<a href="Notifications.html" >Notifications</a>
-<a href="Feedback.html" >Feedback</a>
-</nav>
-
-<div class="nav-bottom">
-<a href="login.html">Log Out</a>
-</div>
+    <nav class="nav-links">
+        <a href="Dashboard.html">Dashboard</a>
+        <a href="ReportFault.html">Report Fault</a>
+        <a href="AssignJob.html">Assign Jobs</a>
+        <a href="View Requests.html" class="current">View Requests</a>
+        <a href="Analytics.html">Analytics</a>
+        <a href="Notifications.html">Notifications</a>
+        <a href="Feedback.html" >Feedback</a>
+    </nav>
+    <div class="nav-bottom">
+        <a href="Login.html">Log Out</a>
+    </div>
 </aside>
+
+<main class="content-area">
+    <div class="page-header">
+        <div>
+            <h1>View Requests</h1>
+            <p>Browse and manage all maintenance requests</p>
+        </div>
+        <div class="staff-info">
+            <div class="staff-initial" id="userInitial">?</div>
+            <span id="userName">Loading...</span>
+        </div>
+    </div>
+
+    <div class="fault-log">
+        <div class="filter-bar">
+            <input type="text" id="searchBox" placeholder="Search room or title..." oninput="applyFilters()">
+            <select id="filterStatus" onchange="applyFilters()">
+                <option value="">All Statuses</option>
+                <option value="Reported">Reported</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+            </select>
+            <select id="filterPriority" onchange="applyFilters()">
+                <option value="">All Priorities</option>
+                <option value="High">High</option>
+                <option value="Medium">Medium</option>
+                <option value="Low">Low</option>
+            </select>
+            <button onclick="clearFilters()">Clear</button>
+        </div>
+
+        <div id="okMsg"  class="ok-msg"></div>
+        <div id="errMsg" class="err-msg"></div>
+        <div id="resultsInfo" class="results-info"></div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th><th>Room</th><th>Title</th><th>Description</th>
+                    <th>Priority</th><th>Status</th><th>Reported By</th><th>Assigned To</th><th>Date</th><th>Update</th>
+                </tr>
+            </thead>
+            <tbody id="reqBody">
+                <tr><td colspan="10" style="padding:16px 0;color:#9ca3af;text-align:center;">Loading...</td></tr>
+            </tbody>
+        </table>
+    </div>
+</main>
+
+<script src="nav.js"></script>
+<script>
+var API         = 'http://127.0.0.1:5000';
+var allRequests = [];
+var userRole    = localStorage.getItem('role') || '';
+
+buildNav('View Requests.html');
+
+function logout() {
+    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
+
+function priorityClass(p) {
+    if (p==='High')   return 'priority-tag priority-urgent';
+    if (p==='Medium') return 'priority-tag priority-standard';
+    return 'priority-tag priority-minor';
+}
+
+function statusClass(s) {
+    if (s==='Reported')    return 'status-badge s-reported';
+    if (s==='In Progress') return 'status-badge s-inprogress';
+    return 'status-badge s-completed';
+}
+
+function loadRequests() {
+    fetch(API + '/requests', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (!Array.isArray(data)) { showErr('Could not load requests. Please log in again.'); return; }
+        allRequests = data;
+        applyFilters();
+    })
+    .catch(function() {
+        document.getElementById('reqBody').innerHTML =
+            '<tr><td colspan="10" style="color:#dc2626;padding:16px 0;text-align:center;">Cannot connect to server.</td></tr>';
+    });
+}
+
+function applyFilters() {
+    var search   = document.getElementById('searchBox').value.toLowerCase().trim();
+    var status   = document.getElementById('filterStatus').value;
+    var priority = document.getElementById('filterPriority').value;
+    var filtered = allRequests.filter(function(r) {
+        return (!search   || r.room.toLowerCase().includes(search) || r.title.toLowerCase().includes(search)) &&
+               (!status   || r.status   === status) &&
+               (!priority || r.priority === priority);
+    });
+    renderTable(filtered);
+}
+
+function clearFilters() {
+    document.getElementById('searchBox').value = '';
+    document.getElementById('filterStatus').value = '';
+    document.getElementById('filterPriority').value = '';
+    renderTable(allRequests);
+}
+
+function renderTable(list) {
+    var tbody = document.getElementById('reqBody');
+    document.getElementById('resultsInfo').textContent = list.length + ' request(s) shown';
+    if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="10" style="padding:16px 0;color:#9ca3af;text-align:center;">No requests match your filters.</td></tr>';
+        return;
+    }
+    var canUpdate = (userRole==='Staff'||userRole==='Subcontractor'||userRole==='Manager');
+    tbody.innerHTML = list.map(function(r) {
+        var date       = r.report_time ? r.report_time.split(' ')[0] : '-';
+        var reportedBy = r.reporter_name || '-';
+        var assignedTo = r.assigned_name || '<span style="color:#9ca3af;">Unassigned</span>';
+        var desc       = r.description ? (r.description.length>50 ? r.description.substring(0,50)+'...' : r.description) : '-';
+        var updateCell = '&#8212;';
+        if (canUpdate && r.status !== 'Completed') {
+            updateCell = '<div class="action-wrap">' +
+                '<select id="sel-'+r.id+'">' +
+                '<option value="Reported"'+(r.status==='Reported'?' selected':'')+'>Reported</option>' +
+                '<option value="In Progress"'+(r.status==='In Progress'?' selected':'')+'>In Progress</option>' +
+                '<option value="Completed">Completed</option>' +
+                '</select>' +
+                '<button class="save-btn" onclick="saveStatus('+r.id+')">Save</button></div>';
+        }
+        return '<tr><td>#'+r.id+'</td><td>Room '+r.room+'</td><td>'+r.title+'</td>' +
+            '<td style="color:#6b7280;font-size:12px;">'+desc+'</td>' +
+            '<td><span class="'+priorityClass(r.priority)+'">'+r.priority+'</span></td>' +
+            '<td><span class="'+statusClass(r.status)+'">'+r.status+'</span></td>' +
+            '<td>'+reportedBy+'</td><td>'+assignedTo+'</td><td>'+date+'</td><td>'+updateCell+'</td></tr>';
+    }).join('');
+}
+
+function saveStatus(id) {
+    var newStatus = document.getElementById('sel-'+id).value;
+    fetch(API + '/requests/'+id+'/status', {
+        method: 'PUT', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            showOk('Request #'+id+' updated to "'+newStatus+'".');
+            loadRequests();
+        } else {
+            showErr(data.error || 'Could not update status.');
+        }
+    })
+    .catch(function() { showErr('Cannot connect to server.'); });
+}
+
+function showOk(msg) {
+    var el=document.getElementById('okMsg'); el.textContent=msg; el.style.display='block';
+    document.getElementById('errMsg').style.display='none';
+    setTimeout(function(){ el.style.display='none'; }, 3000);
+}
+function showErr(msg) {
+    var el=document.getElementById('errMsg'); el.textContent=msg; el.style.display='block';
+    document.getElementById('okMsg').style.display='none';
+}
+
+loadRequests();
+</script>
+</body>
+</html>
