@@ -2,16 +2,33 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.5">
-<title>Feedback-Luxury Lanes</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Assign Job - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
+<style>
+.form-group         { margin-bottom:16px; }
+.form-group label   { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:5px; }
+.form-group input,
+.form-group select,
+.form-group textarea { width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:Segoe UI,sans-serif; outline:none; }
+.form-group textarea { resize:vertical; min-height:80px; }
+.assign-btn         { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
+.assign-btn:hover   { opacity:0.9; }
+.assign-btn:disabled { opacity:0.6; cursor:default; }
+.success-msg { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px; }
+.err-msg     { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px; }
+.hint        { font-size:12px; color:#6b7280; margin-bottom:12px; }
+tbody tr     { cursor:pointer; }
+tbody tr.selected-row { background:#eff6ff; }
+.detail-box  { background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#374151; line-height:1.7; }
+.detail-box strong { color:#1f2937; }
+</style>
 </head>
-
 <body>
+
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-
-<nav class="nav-links">
+    <nav class="nav-links">
 <a href="Dashboard.html" >Dashboard</a>
 <a href="ReportFault.html">Report Fault</a>
 <a href="AssignJob.html" class="current">Assign Jobs</a>
@@ -20,206 +37,234 @@
 <a href="Notifications.html" >Notifications</a>
 <a href="Feedback.html" >Feedback</a>
 </nav>
-
-<div class="nav-bottom">
-<a href="login.html">Log Out</a>
-</div>
+    <div class="nav-bottom">
+        <a href="Login.html">Log Out</a>
+    </div>
 </aside>
 
 <main class="content-area">
 
     <div class="page-header">
         <div>
-            <h1>Performance Analytics</h1>
-            <p>Live overview of all maintenance activity</p>
+            <h1>Assign Job</h1>
+            <p>Select a request and assign it to a staff member or subcontractor</p>
         </div>
         <div class="staff-info">
             <span id="userName">Manager</span>
         </div>
     </div>
 
+    <!-- Step 1: requests table -->
+    <div class="fault-log" style="margin-bottom:22px;">
+        <h3>Step 1 — Select a Request</h3>
+        <p class="hint">Click a row to select it</p>
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Room</th>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Reported</th>
+                </tr>
+            </thead>
+            <tbody id="requestTable">
+                <tr><td colspan="6" style="padding:12px 0; color:#9ca3af;"></td></tr>
+            </tbody>
+        </table>
+    </div>
 
-<input type="hidden" id="selectedRequest">
+    <div class="fault-log" style="max-width:560px;">
+        <h3>Step 2 — Assign to Staff</h3>
+        <br>
 
-<form id="assignForm">
+        <div id="successMsg" class="success-msg"></div>
+        <div id="errMsg"     class="err-msg"></div>
 
-<div class="form-group">
-<label>Staff Search</label>
-<input type="text" id="staffSearch" placeholder="Search staff">
-<div id="staffSuggestions"></div>
-</div>
+        <!-- Selected request summary -->
+        <div id="requestDetail" class="detail-box" style="display:none;"></div>
 
-<div class="form-group">
-<label>Staff Email</label>
-<input type="email" id="staffEmail" readonly>
-</div>
+        <input type="hidden" id="selectedRequestId">
 
-<div class="form-group">
-<label>Priority</label>
-<select id="priority">
-<option>Low</option>
-<option>Medium</option>
-<option>High</option>
-</select>
-</div>
+        <div class="form-group">
+            <label for="staffSelect">Assign To</label>
+            <select id="staffSelect" onchange="onStaffChange()">
+                <option value="">-- Select a staff member --</option>
+            </select>
+        </div>
 
-<div class="form-group">
-<label>Notes</label>
-<textarea id="notes"></textarea>
-</div>
+        <div class="form-group">
+            <label for="staffEmail">Staff Email (notification will be sent here)</label>
+            <input type="email" id="staffEmail" readonly placeholder="Select a staff member above">
+        </div>
 
-<button type="submit">Assign Job + Send Email</button>
+        <div class="form-group">
+            <label for="notes">Additional Notes (optional)</label>
+            <textarea id="notes" placeholder="Any extra instructions for the assigned person..."></textarea>
+        </div>
 
-</form>
-
-</div>
+        <button class="assign-btn" id="assignBtn" onclick="assignJob()">Assign Job</button>
+    </div>
 
 </main>
 
+<script src="nav.js"></script>
 <script>
+var API          = 'http://127.0.0.1:5000';
+var staffData    = [];
+var allRequests  = [];
 
-/* Sidebar Navigation */
-var NAV_LINKS={
+buildNav('AssignJob.html');
 
-Guest:[
-{label:"Dashboard",href:"Dashboard.html"},
-{label:"Report a Fault",href:"ReportFault.html"},
-{label:"My Requests",href:"ViewRequests.html"},
-{label:"Analytics",href:"Analytics.html"},
-{label:"Feedback",href:"Feedback.html"},
-{label:"Notifications",href:"Notifications.html"}
-],
-
-Staff:[
-{label:"Dashboard",href:"Dashboard.html"},
-{label:"Report a Fault",href:"ReportFault.html"},
-{label:"My Tasks",href:"ViewRequests.html"},
-{label:"Assign a Job",href:"AssignJob.html"},
-{label:"Analytics",href:"Analytics.html"},
-{label:"Notifications",href:"Notifications.html"}
-],
-
-Manager:[
-{label:"Dashboard",href:"Dashboard.html"},
-{label:"All Requests",href:"ViewRequests.html"},
-{label:"Assign a Job",href:"AssignJob.html"},
-{label:"Manage Rooms",href:"ManageRooms.html"},
-{label:"Analytics",href:"Analytics.html"},
-{label:"Notifications",href:"Notifications.html"}
-]
-
-};
-
-function initNav(currentPage){
-
-let roleRaw=localStorage.getItem("role")||"Guest";
-let name=localStorage.getItem("name")||"User";
-
-let role="Guest";
-
-if(roleRaw.toLowerCase().includes("staff")) role="Staff";
-if(roleRaw.toLowerCase().includes("manager")) role="Manager";
-
-document.getElementById("sbRole").textContent=role;
-
-let links=NAV_LINKS[role];
-
-document.getElementById("navLinks").innerHTML=
-links.map(l=>{
-let active=l.href===currentPage?" active":"";
-return `<li><a href="${l.href}" class="nav-link${active}">${l.label}</a></li>`;
-}).join("");
-
+function priorityClass(p) {
+    if (p === 'High')   return 'priority-tag priority-urgent';
+    if (p === 'Medium') return 'priority-tag priority-standard';
+    return 'priority-tag priority-minor';
 }
 
-/* Logout */
-function logout(){
-localStorage.clear();
-window.location.href="Login.html";
+// ── Load open requests into table ────────────────────────────────────────────
+function loadRequests() {
+    fetch(API + '/requests', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        allRequests = data.filter(function(r) { return r.status !== 'Completed'; });
+        var tbody   = document.getElementById('requestTable');
+
+        if (allRequests.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" style="padding:12px 0; color:#9ca3af;">No open requests.</td></tr>';
+            return;
+        }
+
+        tbody.innerHTML = allRequests.map(function(r) {
+            var date = r.report_time ? r.report_time.split(' ')[0] : '-';
+            return '<tr id="row-' + r.id + '" onclick="selectRequest(' + r.id + ')">' +
+                '<td>#' + r.id + '</td>' +
+                '<td>Room ' + r.room + '</td>' +
+                '<td>' + r.title + '</td>' +
+                '<td><span class="' + priorityClass(r.priority) + '">' + r.priority + '</span></td>' +
+                '<td>' + r.status + '</td>' +
+                '<td>' + date + '</td>' +
+                '</tr>';
+        }).join('');
+    })
+    .catch(function() {
+        document.getElementById('requestTable').innerHTML =
+            '<tr><td colspan="6" style="color:#dc2626; padding:12px 0;">Cannot connect to server.</td></tr>';
+    });
 }
 
-/* Load Requests */
-async function loadRequests(){
-
-const res=await fetch("http://127.0.0.1:5000/requests");
-const data=await res.json();
-
-let table=document.getElementById("requestTable");
-table.innerHTML="";
-
-data.forEach(req=>{
-table.innerHTML+=`
-<tr onclick="selectRequest(${req.id})">
-<td><input type="radio" name="req"></td>
-<td>${req.id}</td>
-<td>${req.room}</td>
-<td>${req.title}</td>
-<td>${req.priority}</td>
-<td>${req.status}</td>
-</tr>
-`;
-});
-
+// ── Load staff into dropdown ──────────────────────────────────────────────────
+function loadStaff() {
+    fetch(API + '/staff', { credentials: 'include' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        staffData   = data;
+        var sel     = document.getElementById('staffSelect');
+        sel.innerHTML = '<option value="">-- Select a staff member --</option>';
+        data.forEach(function(s) {
+            var opt         = document.createElement('option');
+            opt.value       = s.user_id;
+            opt.textContent = s.first_name + ' ' + s.surname + ' (' + s.role + ')';
+            sel.appendChild(opt);
+        });
+    });
 }
 
-function selectRequest(id){
-document.getElementById("selectedRequest").value=id;
+// ── Row click: highlight and show request detail ──────────────────────────────
+function selectRequest(id) {
+    document.getElementById('selectedRequestId').value = id;
+
+    // Highlight selected row
+    document.querySelectorAll('#requestTable tr').forEach(function(row) {
+        row.classList.remove('selected-row');
+    });
+    var rowEl = document.getElementById('row-' + id);
+    if (rowEl) { rowEl.classList.add('selected-row'); }
+
+    // Show request summary box
+    var req    = allRequests.find(function(r) { return r.id === id; });
+    var detBox = document.getElementById('requestDetail');
+    if (req) {
+        detBox.innerHTML =
+            '<strong>Request #' + req.id + '</strong> &nbsp;|&nbsp; Room ' + req.room + '<br>' +
+            '<strong>Title:</strong> ' + req.title + '<br>' +
+            '<strong>Priority:</strong> ' + req.priority + ' &nbsp;|&nbsp; <strong>Status:</strong> ' + req.status + '<br>' +
+            '<strong>Description:</strong> ' + (req.description || '-');
+        detBox.style.display = 'block';
+    }
 }
 
-/* Staff Search */
-document.getElementById("staffSearch").addEventListener("input", async function(){
-
-let keyword=this.value;
-if(keyword.length<2) return;
-
-const res=await fetch("http://127.0.0.1:5000/staff");
-const data=await res.json();
-
-let box=document.getElementById("staffSuggestions");
-box.innerHTML="";
-
-data.forEach(staff=>{
-if(staff.first_name.toLowerCase().includes(keyword.toLowerCase())){
-
-let div=document.createElement("div");
-
-div.textContent=staff.first_name+" "+staff.surname+" ("+staff.role+")";
-
-div.onclick=()=>{
-staffSearch.value=staff.first_name+" "+staff.surname;
-staffEmail.value=staff.email;
-box.innerHTML="";
-};
-
-box.appendChild(div);
+// ── Staff dropdown change: fill in email ──────────────────────────────────────
+function onStaffChange() {
+    var uid    = document.getElementById('staffSelect').value;
+    var member = staffData.find(function(s) { return String(s.user_id) === String(uid); });
+    document.getElementById('staffEmail').value = member ? (member.email || 'No email on record') : '';
 }
-});
 
-});
+// ── Assign job ────────────────────────────────────────────────────────────────
+function assignJob() {
+    var requestId  = document.getElementById('selectedRequestId').value;
+    var assignedTo = document.getElementById('staffSelect').value;
+    var notes      = document.getElementById('notes').value.trim();
+    var btn        = document.getElementById('assignBtn');
 
-/* Submit Assignment */
-document.getElementById("assignForm").addEventListener("submit", async e=>{
-e.preventDefault();
+    document.getElementById('successMsg').style.display = 'none';
+    document.getElementById('errMsg').style.display     = 'none';
 
-let requestId=document.getElementById("selectedRequest").value;
+    if (!requestId)  { showErr('Please select a request first.'); return; }
+    if (!assignedTo) { showErr('Please select a staff member.'); return; }
 
-await fetch(`http://127.0.0.1:5000/requests/${requestId}/assign`,{
-method:"PUT",
-headers:{ "Content-Type":"application/json" },
-credentials:"include",
-body:JSON.stringify({
-assigned_to:1
-})
-});
+    btn.disabled    = true;
+    btn.textContent = 'Assigning...';
 
-alert("Job Assigned!");
+    fetch(API + '/requests/' + requestId + '/assign', {
+        method:      'PUT',
+        credentials: 'include',
+        headers:     { 'Content-Type': 'application/json' },
+        body:        JSON.stringify({ assigned_to: parseInt(assignedTo), notes: notes })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            var member = staffData.find(function(s) { return String(s.user_id) === String(assignedTo); });
+            var name   = member ? member.first_name + ' ' + member.surname : 'staff member';
+            var s      = document.getElementById('successMsg');
+            s.textContent   = 'Job assigned to ' + name + '. A notification has been sent to their account.';
+            s.style.display = 'block';
+
+            // Reset form
+            document.getElementById('selectedRequestId').value = '';
+            document.getElementById('staffSelect').value       = '';
+            document.getElementById('staffEmail').value        = '';
+            document.getElementById('notes').value             = '';
+            document.getElementById('requestDetail').style.display = 'none';
+            document.querySelectorAll('#requestTable tr').forEach(function(row) {
+                row.classList.remove('selected-row');
+            });
+
+            loadRequests();
+        } else {
+            showErr(data.error || 'Could not assign. Please try again.');
+        }
+        btn.disabled    = false;
+        btn.textContent = 'Assign Job';
+    })
+    .catch(function() {
+        showErr('Cannot connect to server. Is Server.py running?');
+        btn.disabled    = false;
+        btn.textContent = 'Assign Job';
+    });
+}
+
+function showErr(msg) {
+    var e = document.getElementById('errMsg');
+    e.textContent   = msg;
+    e.style.display = 'block';
+}
+
 loadRequests();
-
-});
-
-initNav("AssignJob.html");
-loadRequests();
-
+loadStaff();
 </script>
 
 </body>
