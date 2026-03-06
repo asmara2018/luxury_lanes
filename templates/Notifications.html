@@ -6,35 +6,27 @@
 <title>Notifications - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <style>
-.notif-item          { padding:14px 16px; border-bottom:1px solid #f1f5f9; }
-.notif-item:last-child { border-bottom:none; }
-.notif-item.unread   { background:#eff6ff; border-left:3px solid #2563eb; }
-.notif-item.read     { border-left:3px solid transparent; }
-.notif-type          { font-size:11px; font-weight:600; color:#2563eb; text-transform:uppercase; margin-bottom:3px; }
-.notif-message       { font-size:13px; color:#374151; line-height:1.5; }
-.notif-time          { font-size:11px; color:#9ca3af; margin-top:4px; }
-.mark-read-btn       { padding:7px 14px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; font-size:12px; cursor:pointer; }
-.mark-read-btn:hover { background:#e5e7eb; }
+.notif-item { padding: 14px 16px; border-bottom: 1px solid #f1f5f9; }
+.notif-item:last-child { border-bottom: none; }
+.notif-item.unread { background: #eff6ff; border-left: 3px solid #2563eb; }
+.notif-item.read   { border-left: 3px solid transparent; }
+.notif-type    { font-size: 11px; font-weight: 700; color: #2563eb; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+.notif-message { font-size: 13px; color: #374151; line-height: 1.5; }
+.notif-time    { font-size: 11px; color: #9ca3af; margin-top: 4px; }
+.mark-btn { padding: 7px 14px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Segoe UI', Arial, sans-serif; }
+.mark-btn:hover { background: #e5e7eb; }
+.type-Confirmation { color: #16a34a; }
+.type-Assignment   { color: #2563eb; }
+.type-Completed    { color: #065f46; }
+.type-New          { color: #dc2626; }
 </style>
 </head>
 <body>
-
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-    <nav class="nav-links">
-        <a href="Dashboard.html">Dashboard</a>
-        <a href="ReportFault.html">Report Fault</a>
-        <a href="AssignJob.html">Assign Jobs</a>
-        <a href="View Requests.html">View Requests</a>
-        <a href="Analytics.html">Analytics</a>
-        <a href="Notifications.html" class="current">Notifications</a>
-        <a href="Feedback.html" >Feedback</a>
-    </nav>
-    <div class="nav-bottom">
-        <a href="Login.html">Log Out</a>
-    </div>
+    <nav class="nav-links" id="navLinks"></nav>
+    <div class="nav-bottom"><a href="Login.html" onclick="logout()">Log Out</a></div>
 </aside>
-
 <main class="content-area">
     <div class="page-header">
         <div>
@@ -43,50 +35,72 @@
         </div>
         <div class="staff-info">
             <div class="staff-initial" id="userInitial">?</div>
-            <span id="userName">Loading...</span>
+            <span id="userName">User</span>
         </div>
     </div>
-
     <div class="fault-log">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
             <h3>Your Notifications</h3>
-            <button class="mark-read-btn" onclick="markAllRead()">Mark all as read</button>
+            <button class="mark-btn" onclick="markAllRead()">Mark all as read</button>
         </div>
         <div id="notifList">
             <div style="padding:24px 0;color:#9ca3af;font-size:13px;text-align:center;">Loading...</div>
         </div>
     </div>
 </main>
-
-<script src="nav.js"></script>
 <script>
-var API = 'http://127.0.0.1:5000';
-buildNav('Notifications.html');
+var API  = 'http://127.0.0.1:5000';
+var uid  = localStorage.getItem('user_id');
+var role = localStorage.getItem('role') || '';
+var name = localStorage.getItem('name') || 'User';
 
-function logout() {
-    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
-    localStorage.clear();
-}
+document.getElementById('userName').textContent    = name;
+document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+
+(function buildNav() {
+    var links = [
+        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
+        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
+        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
+        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
+        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
+        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
+    ];
+    var nav = document.getElementById('navLinks');
+    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
+         .forEach(function(l) {
+             var a = document.createElement('a');
+             a.href = l.href; a.textContent = l.label;
+             if (l.href === 'Notifications.html') a.className = 'current';
+             nav.appendChild(a);
+         });
+})();
+
+function logout() { fetch(API+'/logout',{method:'POST',credentials:'include'}); localStorage.clear(); }
 
 function loadNotifications() {
-    fetch(API + '/notifications', { credentials: 'include' })
+    fetch(API + '/notifications?user_id=' + uid, { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         var list   = data.notifications || [];
         var unread = data.unread_count  || 0;
-        document.getElementById('unreadLabel').textContent = unread>0 ? unread+' unread notification(s)' : 'All caught up';
-
+        document.getElementById('unreadLabel').textContent =
+            unread > 0 ? unread + ' unread notification(s)' : 'All caught up — no unread notifications';
         var container = document.getElementById('notifList');
         if (list.length === 0) {
-            container.innerHTML = '<div style="padding:24px 0;color:#9ca3af;font-size:13px;text-align:center;">You have no notifications yet.</div>';
+            container.innerHTML = '<div style="padding:32px 0;color:#9ca3af;font-size:13px;text-align:center;">No notifications yet.</div>';
             return;
         }
         container.innerHTML = list.map(function(n) {
-            var time = n.created_at ? n.created_at.split(' ')[0] : '-';
-            return '<div class="notif-item '+(n.is_read?'read':'unread')+'">' +
-                '<div class="notif-type">'+(n.type||'Update')+'</div>' +
-                '<div class="notif-message">'+n.message+'</div>' +
-                '<div class="notif-time">'+time+'</div></div>';
+            var time     = n.created_at ? n.created_at.replace('T',' ').split('.')[0] : '-';
+            var typeClass = 'type-' + (n.type || 'Update').split(' ')[0];
+            return '<div class="notif-item ' + (n.is_read ? 'read' : 'unread') + '">' +
+                '<div class="notif-type ' + typeClass + '">' + (n.type || 'Update') + '</div>' +
+                '<div class="notif-message">' + n.message + '</div>' +
+                '<div class="notif-time">' + time + '</div>' +
+                '</div>';
         }).join('');
     })
     .catch(function() {
@@ -96,12 +110,14 @@ function loadNotifications() {
 }
 
 function markAllRead() {
-    fetch(API + '/notifications/read', { method: 'PUT', credentials: 'include' })
+    // Pass user_id as query param for file:// fallback
+    fetch(API + '/notifications/read?user_id=' + uid, { method: 'PUT', credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) { if (data.success) loadNotifications(); });
 }
 
 loadNotifications();
+setInterval(loadNotifications, 30000);
 </script>
 </body>
 </html>

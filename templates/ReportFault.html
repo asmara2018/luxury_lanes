@@ -6,38 +6,23 @@
 <title>Report Fault - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <style>
-.fault-log        { max-width:620px; }
-.form-group       { margin-bottom:16px; }
-.form-group label { display:block; font-size:13px; font-weight:600; color:#374151; margin-bottom:5px; }
-.form-group input,
-.form-group select,
-.form-group textarea { width:100%; padding:10px; border:1px solid #e5e7eb; border-radius:6px; font-size:14px; font-family:Segoe UI,sans-serif; outline:none; }
-.form-group textarea { resize:vertical; min-height:110px; }
-.submit-btn          { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
-.submit-btn:hover    { opacity:0.9; }
-.submit-btn:disabled { opacity:0.6; cursor:default; }
-.ok-msg  { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
-.err-msg { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+.fault-form { max-width: 580px; }
+.submit-btn {
+    width: 100%; padding: 12px; background: #2563eb; color: white;
+    border: none; border-radius: 7px; font-size: 14px; font-weight: 600;
+    cursor: pointer; margin-top: 6px; font-family: 'Segoe UI', Arial, sans-serif;
+    transition: background 0.15s;
+}
+.submit-btn:hover    { background: #1d4ed8; }
+.submit-btn:disabled { opacity: 0.6; cursor: default; }
 </style>
 </head>
 <body>
-
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-    <nav class="nav-links">
-        <a href="Dashboard.html">Dashboard</a>
-        <a href="ReportFault.html" class="current">Report Fault</a>
-        <a href="AssignJob.html">Assign Jobs</a>
-        <a href="View Requests.html">View Requests</a>
-        <a href="Analytics.html">Analytics</a>
-        <a href="Notifications.html">Notifications</a>
-        <a href="Feedback.html" >Feedback</a>
-    </nav>
-    <div class="nav-bottom">
-        <a href="Login.html">Log Out</a>
-    </div>
+    <nav class="nav-links" id="navLinks"></nav>
+    <div class="nav-bottom"><a href="Login.html" onclick="logout()">Log Out</a></div>
 </aside>
-
 <main class="content-area">
     <div class="page-header">
         <div>
@@ -46,47 +31,67 @@
         </div>
         <div class="staff-info">
             <div class="staff-initial" id="userInitial">?</div>
-            <span id="userName">Loading...</span>
+            <span id="userName">User</span>
         </div>
     </div>
-
-    <div class="fault-log">
+    <div class="fault-log fault-form">
         <h3>New Fault Report</h3><br>
         <div id="okMsg"  class="ok-msg"></div>
         <div id="errMsg" class="err-msg"></div>
         <div class="form-group">
-            <label for="room">Room Number</label>
+            <label>Room Number</label>
             <input type="text" id="room" placeholder="e.g. 101">
         </div>
         <div class="form-group">
-            <label for="title">Issue Title</label>
+            <label>Issue Title</label>
             <input type="text" id="title" placeholder="e.g. Broken air conditioning">
         </div>
         <div class="form-group">
-            <label for="description">Description</label>
+            <label>Description</label>
             <textarea id="description" placeholder="Describe the fault in detail..."></textarea>
         </div>
         <div class="form-group">
-            <label for="priority">Priority</label>
+            <label>Priority</label>
             <select id="priority">
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
+                <option value="Low">Low — Minor inconvenience</option>
+                <option value="Medium" selected>Medium — Needs attention soon</option>
+                <option value="High">High — Urgent, affects safety or comfort</option>
             </select>
         </div>
         <button class="submit-btn" id="submitBtn" onclick="submitFault()">Submit Fault Report</button>
     </div>
 </main>
-
-<script src="nav.js"></script>
 <script>
-var API = 'http://127.0.0.1:5000';
-buildNav('ReportFault.html');
+var API  = 'http://127.0.0.1:5000';
+var uid  = localStorage.getItem('user_id');
+var role = localStorage.getItem('role') || '';
+var name = localStorage.getItem('name') || 'User';
 
-function logout() {
-    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
-    localStorage.clear();
-}
+document.getElementById('userName').textContent    = name;
+document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+
+(function buildNav() {
+    var links = [
+        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
+        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
+        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
+        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
+        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
+        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
+    ];
+    var nav = document.getElementById('navLinks');
+    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
+         .forEach(function(l) {
+             var a = document.createElement('a');
+             a.href = l.href; a.textContent = l.label;
+             if (l.href === 'ReportFault.html') a.className = 'current';
+             nav.appendChild(a);
+         });
+})();
+
+function logout() { fetch(API+'/logout',{method:'POST',credentials:'include'}); localStorage.clear(); }
 
 function submitFault() {
     var room        = document.getElementById('room').value.trim();
@@ -98,23 +103,25 @@ function submitFault() {
     document.getElementById('okMsg').style.display  = 'none';
     document.getElementById('errMsg').style.display = 'none';
 
-    if (!room || !title || !description) { showErr('Please fill in all fields.'); return; }
+    if (!room)        { showErr('Please enter a room number.'); return; }
+    if (!title)       { showErr('Please enter an issue title.'); return; }
+    if (!description) { showErr('Please enter a description.'); return; }
 
     btn.disabled = true; btn.textContent = 'Submitting...';
 
     fetch(API + '/report-fault', {
         method: 'POST', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ room: room, title: title, description: description, priority: priority, user_id: localStorage.getItem('user_id') })
+        body: JSON.stringify({ room: room, title: title, description: description, priority: priority, user_id: uid })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.success) {
-            showOk('Fault reported successfully. Reference: #' + data.request_id);
-            document.getElementById('room').value = '';
-            document.getElementById('title').value = '';
+            showOk('Fault reported successfully. Your reference number is #' + data.request_id);
+            document.getElementById('room').value        = '';
+            document.getElementById('title').value       = '';
             document.getElementById('description').value = '';
-            document.getElementById('priority').value = 'Low';
+            document.getElementById('priority').value    = 'Medium';
         } else {
             showErr(data.message || 'Could not submit. Please try again.');
         }
@@ -126,8 +133,8 @@ function submitFault() {
     });
 }
 
-function showOk(msg) { var e=document.getElementById('okMsg'); e.textContent=msg; e.style.display='block'; }
-function showErr(msg) { var e=document.getElementById('errMsg'); e.textContent=msg; e.style.display='block'; }
+function showOk(msg)  { var e=document.getElementById('okMsg');  e.textContent=msg; e.style.display='block'; document.getElementById('errMsg').style.display='none'; }
+function showErr(msg) { var e=document.getElementById('errMsg'); e.textContent=msg; e.style.display='block'; document.getElementById('okMsg').style.display='none'; }
 </script>
 </body>
 </html>

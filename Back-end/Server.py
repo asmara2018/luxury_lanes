@@ -91,7 +91,8 @@ def init_db():
         status      TEXT DEFAULT 'Reported',
         user_id     INTEGER,
         assigned_to INTEGER,
-        report_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+        report_time      DATETIME DEFAULT CURRENT_TIMESTAMP,
+        completion_note  TEXT,
         FOREIGN KEY(user_id)     REFERENCES Users(user_id),
         FOREIGN KEY(assigned_to) REFERENCES Users(user_id)
     )""")
@@ -149,6 +150,24 @@ def init_db():
         time_recorded DATETIME DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(user_id) REFERENCES Users(user_id)
     )""")
+
+    # ── Schema migrations for existing databases ──────────────
+    # If the DB was created by the old database.py prototype, the
+    # Notifications table may be missing the 'type' column. Add it
+    # safely using a try/except — ALTER TABLE fails silently if the
+    # column already exists in newer builds.
+    try:
+        c.execute("ALTER TABLE Notifications ADD COLUMN type TEXT DEFAULT 'Update'")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists — safe to ignore
+
+    # Add completion_note to requests if not present
+    try:
+        c.execute("ALTER TABLE requests ADD COLUMN completion_note TEXT")
+        conn.commit()
+    except Exception:
+        pass  # Column already exists
 
     # Seed rooms 101-130 if empty
     if conn.execute("SELECT COUNT(*) FROM Rooms").fetchone()[0] == 0:
@@ -454,7 +473,8 @@ def get_requests():
             LEFT JOIN Users a ON a.user_id = req.assigned_to
             ORDER BY req.id DESC
         """).fetchall()
-    elif role in ("Staff", "Subcontractor"):
+    elif role == "Staff":
+        # Staff see all open/unassigned requests plus their own assigned jobs
         rows = conn.execute("""
             SELECT req.*,
                    u.first_name||' '||u.surname AS reporter_name,
@@ -463,6 +483,18 @@ def get_requests():
             LEFT JOIN Users u ON u.user_id = req.user_id
             LEFT JOIN Users a ON a.user_id = req.assigned_to
             WHERE req.assigned_to=? OR req.status='Reported'
+            ORDER BY req.id DESC
+        """, (uid,)).fetchall()
+    elif role == "Subcontractor":
+        # Subcontractors only see jobs assigned to them
+        rows = conn.execute("""
+            SELECT req.*,
+                   u.first_name||' '||u.surname AS reporter_name,
+                   a.first_name||' '||a.surname AS assigned_name
+            FROM requests req
+            LEFT JOIN Users u ON u.user_id = req.user_id
+            LEFT JOIN Users a ON a.user_id = req.assigned_to
+            WHERE req.assigned_to=?
             ORDER BY req.id DESC
         """, (uid,)).fetchall()
     else:
@@ -495,15 +527,19 @@ def get_requests():
 @app.route("/requests/<int:rid>/assign", methods=["PUT"])
 def assign_request(rid):
     uid = session.get("user_id")
+    body = request.json or {}
+    if not uid:
+        uid = body.get("user_id")
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
+
     conn = connect_db()
     role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
-    if role not in ("Manager", "Staff"):
+    if role not in ("Manager", "Staff", "Subcontractor"):
         conn.close()
-        return jsonify({"error": "Manager or Staff access required"}), 403
+        return jsonify({"error": "Access denied"}), 403
 
-    assigned_to = request.json.get("assigned_to")
+    assigned_to = body.get("assigned_to")
     if not assigned_to:
         conn.close()
         return jsonify({"error": "Please select a person to assign to"}), 400
@@ -516,11 +552,19 @@ def assign_request(rid):
 
     req = conn.execute("SELECT title, room, user_id FROM requests WHERE id=?", (rid,)).fetchone()
     if req:
+        # Notify the assigned worker
         notify(assigned_to, rid,
                f"You have been assigned: '{req['title']}' in Room {req['room']}.", "Assignment")
+        # Notify the guest who reported the fault
         if req["user_id"]:
             notify(req["user_id"], rid,
                    f"Your request for Room {req['room']} is now In Progress.", "Update")
+        # Notify all managers so they can track progress
+        managers = conn.execute("SELECT user_id FROM Users WHERE role='Manager'").fetchall()
+        for m in managers:
+            if str(m["user_id"]) != str(uid):
+                notify(m["user_id"], rid,
+                       f"Request #{rid} (Room {req['room']}: {req['title']}) has been assigned.", "Assignment")
 
     conn.close()
     audit(uid, "ASSIGN", f"Request #{rid} assigned to user {assigned_to}")
@@ -534,26 +578,49 @@ def assign_request(rid):
 @app.route("/requests/<int:rid>/status", methods=["PUT"])
 def update_status(rid):
     uid = session.get("user_id")
+    body = request.json or {}
+    if not uid:
+        uid = body.get("user_id")
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
 
-    new_status = request.json.get("status", "").strip()
+    new_status = body.get("status", "").strip()
+    completion_note = body.get("completion_note", "").strip()
     if new_status not in ("In Progress", "Completed", "Reported"):
         return jsonify({"error": "Invalid status. Use Reported, In Progress, or Completed."}), 400
 
     conn = connect_db()
-    conn.execute("UPDATE requests SET status=? WHERE id=?", (new_status, rid))
+    # Subcontractors can only update requests assigned to them
+    role_row = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()
+    role = role_row["role"] if role_row else ""
+    if role == "Subcontractor":
+        assigned = conn.execute("SELECT assigned_to FROM requests WHERE id=?", (rid,)).fetchone()
+        if not assigned or str(assigned["assigned_to"]) != str(uid):
+            conn.close()
+            return jsonify({"error": "You can only update requests assigned to you"}), 403
+
+    if completion_note:
+        conn.execute("UPDATE requests SET status=?, completion_note=? WHERE id=?", (new_status, completion_note, rid))
+    else:
+        conn.execute("UPDATE requests SET status=? WHERE id=?", (new_status, rid))
     conn.commit()
 
     if new_status == "Completed":
         req = conn.execute(
-            "SELECT title, room, user_id FROM requests WHERE id=?", (rid,)
+            "SELECT title, room, user_id, assigned_to FROM requests WHERE id=?", (rid,)
         ).fetchone()
         if req:
+            # Notify the guest who raised the fault
             if req["user_id"]:
                 notify(req["user_id"], rid,
-                       f"Your maintenance request for Room {req['room']} ({req['title']}) has been completed.",
-                       "Completed")
+                       f"Your maintenance request for Room {req['room']} ({req['title']}) has been completed. "
+                       f"Please leave feedback to help us improve.", "Completed")
+            # Notify all managers that a job has been completed
+            managers = conn.execute("SELECT user_id FROM Users WHERE role='Manager'").fetchall()
+            for m in managers:
+                notify(m["user_id"], rid,
+                       f"Job completed: Request #{rid} (Room {req['room']}: {req['title']}) has been marked complete.", "Completed")
+            # Mark the room as available again
             room_row = conn.execute(
                 "SELECT room_id FROM Rooms WHERE room_number=?", (req["room"],)
             ).fetchone()
@@ -576,6 +643,8 @@ def update_status(rid):
 def get_staff():
     uid = session.get("user_id")
     if not uid:
+        uid = request.args.get("user_id")
+    if not uid:
         return jsonify({"error": "Not logged in"}), 401
     conn = connect_db()
     role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
@@ -595,10 +664,10 @@ def get_staff():
 
 @app.route("/feedback", methods=["POST"])
 def submit_feedback():
-    uid = session.get("user_id")
+    d          = request.json or {}
+    uid        = session.get("user_id") or d.get("user_id")
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
-    d          = request.json
     request_id = d.get("request_id")
     rating     = d.get("rating")
     comments   = d.get("comments", "").strip()
@@ -634,11 +703,13 @@ def submit_feedback():
 def get_feedback():
     uid = session.get("user_id")
     if not uid:
+        uid = request.args.get("user_id")
+    if not uid:
         return jsonify({"error": "Not logged in"}), 401
     conn = connect_db()
     role = conn.execute("SELECT role FROM Users WHERE user_id=?", (uid,)).fetchone()["role"]
 
-    if role in ("Manager", "Staff"):
+    if role in ("Manager", "Staff", "Subcontractor"):
         rows = conn.execute("""
             SELECT f.*, u.first_name||' '||u.surname AS guest_name,
                    req.title, req.room AS room_number
@@ -689,6 +760,8 @@ def get_notifications():
 @app.route("/notifications/read", methods=["PUT"])
 def mark_read():
     uid = session.get("user_id")
+    if not uid:
+        uid = request.args.get("user_id")
     if not uid:
         return jsonify({"error": "Not logged in"}), 401
     conn = connect_db()

@@ -2,161 +2,69 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Luxury Lanes - Login</title>
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
-}
-
-body {
-  background: #CFFDFF;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.login_box {
-  width: 460px;
-  background: white;
-  padding: 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.09);
-  display: grid;
-  gap: 1rem;
-}
-
-.login_box h1 {
-  text-align: center;
-  font-family: Georgia, serif;
-}
-
-label { font-weight: bold; }
-
-input {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  width: 100%;
-  font-size: 14px;
-  outline: none;
-}
-
-input:focus { border-color: #3578e5; }
-
-button {
-  padding: 12px;
-  background: #2c7be5;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: bold;
-}
-
-button:hover    { opacity: 0.88; }
-button:disabled { opacity: 0.6; cursor: default; }
-
-.err-msg {
-  display: none;
-  background: #fde8e8;
-  color: #c0392b;
-  border-left: 4px solid #e05252;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: bold;
-}
-
-.signup {
-  text-align: center;
-  font-size: 14px;
-}
-
-.signup a {
-  color: #2c7be5;
-  text-decoration: none;
-}
-
-.signup a:hover { text-decoration: underline; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - Luxury Lanes</title>
+<link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
-<body>
-
-<div class="login_box">
-  <h1>Luxury Lanes</h1>
-
-  <div id="errMsg" class="err-msg"></div>
-
-  <label>Email</label>
-  <input type="email" id="email" placeholder="you@example.com"
-         onkeydown="if(event.key==='Enter') login()">
-
-  <label>Password</label>
-  <input type="password" id="password" placeholder="Enter your password"
-         onkeydown="if(event.key==='Enter') login()">
-
-  <button id="loginBtn" onclick="login()">Login</button>
-
-  <div class="signup">
-    Don't have an account? <a href="Register.html">Sign up</a>
-  </div>
+<body class="auth-body">
+<div class="auth-card">
+    <h1>Luxury Lanes</h1>
+    <p class="subtitle">Hotel Maintenance Management — sign in to continue</p>
+    <div id="errMsg" class="err-msg"></div>
+    <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Your password" onkeydown="if(event.key==='Enter')login()">
+    </div>
+    <button class="btn-primary" id="loginBtn" onclick="login()">Sign In</button>
+    <p class="auth-link">No account? <a href="Register.html">Register here</a></p>
 </div>
-
 <script>
 var API = 'http://127.0.0.1:5000';
 
 function login() {
-  var email    = document.getElementById('email').value.trim();
-  var password = document.getElementById('password').value;
-  var btn      = document.getElementById('loginBtn');
+    var email    = document.getElementById('email').value.trim();
+    var password = document.getElementById('password').value;
+    var btn      = document.getElementById('loginBtn');
+    var errEl    = document.getElementById('errMsg');
+    errEl.style.display = 'none';
 
-  document.getElementById('errMsg').style.display = 'none';
+    if (!email || !password) { showErr('Please enter your email and password.'); return; }
 
-  if (!email || !password) {
-    showErr('Please enter your email and password.');
-    return;
-  }
+    btn.disabled = true; btn.textContent = 'Signing in...';
 
-  btn.disabled    = true;
-  btn.textContent = 'Logging in...';
-
-  fetch(API + '/login', {
-    method:      'POST',
-    credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify({ email: email, password: password })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.success) {
-      localStorage.setItem('user_id', data.user_id);
-      localStorage.setItem('role',    data.role);
-      localStorage.setItem('name',    data.name || data.first_name + ' ' + data.surname);
-      window.location.href = 'Dashboard.html';
-    } else {
-      showErr(data.message || 'Wrong email or password.');
-      btn.disabled    = false;
-      btn.textContent = 'Login';
-    }
-  })
-  .catch(function() {
-    showErr('Cannot connect to server. Make sure Server.py is running.');
-    btn.disabled    = false;
-    btn.textContent = 'Login';
-  });
+    fetch(API + '/login', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email, password: password })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            localStorage.setItem('user_id', data.user_id);
+            localStorage.setItem('role',    data.role);
+            localStorage.setItem('name',    data.name);
+            localStorage.setItem('email',   data.email);
+            window.location.href = 'Dashboard.html';
+        } else {
+            showErr(data.message || 'Incorrect email or password.');
+            btn.disabled = false; btn.textContent = 'Sign In';
+        }
+    })
+    .catch(function() {
+        showErr('Cannot connect to server. Make sure Server.py is running.');
+        btn.disabled = false; btn.textContent = 'Sign In';
+    });
 }
 
 function showErr(msg) {
-  var e = document.getElementById('errMsg');
-  e.textContent   = msg;
-  e.style.display = 'block';
+    var el = document.getElementById('errMsg');
+    el.textContent = msg; el.style.display = 'block';
 }
 </script>
 </body>
 </html>
-

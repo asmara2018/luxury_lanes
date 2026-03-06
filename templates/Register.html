@@ -2,185 +2,97 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Luxury Lanes - Register</title>
-<style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: Arial, sans-serif;
-}
-
-body {
-  background: #CFFDFF;
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.register_box {
-  width: 480px;
-  background: white;
-  padding: 2.5rem;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-  display: grid;
-  gap: 1rem;
-}
-
-h1, p { text-align: center; }
-p { color: #666; }
-
-label { font-weight: bold; }
-
-input, select {
-  padding: 12px;
-  border-radius: 10px;
-  border: 1px solid #ccc;
-  width: 100%;
-  font-size: 14px;
-  outline: none;
-  background: white;
-}
-
-input:focus, select:focus { border-color: #3578e5; }
-
-.err-msg {
-  display: none;
-  background: #fde8e8;
-  color: #c0392b;
-  border-left: 4px solid #e05252;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: bold;
-}
-
-button {
-  padding: 12px;
-  background: #2c7be5;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: bold;
-}
-
-button:hover    { opacity: 0.88; }
-button:disabled { opacity: 0.6; cursor: default; }
-
-.back-link {
-  text-align: center;
-  font-size: 14px;
-}
-
-.back-link a {
-  color: #2c7be5;
-  text-decoration: none;
-}
-
-.back-link a:hover { text-decoration: underline; }
-</style>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register - Luxury Lanes</title>
+<link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
-<body>
-
-<div class="register_box">
-  <h1>Luxury Lanes</h1>
-  <p>Create an account</p>
-
-  <div id="errMsg" class="err-msg"></div>
-
-  <label>Full Name</label>
-  <input type="text" id="fullName" placeholder="Jane Smith">
-
-  <label>Email</label>
-  <input type="email" id="email" placeholder="you@example.com">
-
-  <label>Password</label>
-  <input type="password" id="password" placeholder="Min. 6 characters">
-
-  <label>Role</label>
-  <select id="role">
-    <option value="">Select role</option>
-    <option value="Guest">Guest</option>
-    <option value="Staff">Staff</option>
-    <option value="Subcontractor">Subcontractor</option>
-  </select>
-
-  <button id="regBtn" onclick="register()">Create Account</button>
-
-  <div class="back-link">
-    Already have an account? <a href="Login.html">Back to login</a>
-  </div>
+<body class="auth-body">
+<div class="auth-card">
+    <h1>Create Account</h1>
+    <p class="subtitle">Register to access the maintenance system</p>
+    <div id="errMsg"  class="err-msg"></div>
+    <div id="okMsg"   class="ok-msg"></div>
+    <div class="form-group">
+        <label>First Name</label>
+        <input type="text" id="firstName" placeholder="e.g. James">
+    </div>
+    <div class="form-group">
+        <label>Surname</label>
+        <input type="text" id="surname" placeholder="e.g. Smith">
+    </div>
+    <div class="form-group">
+        <label>Email Address</label>
+        <input type="email" id="email" placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+        <label>Role</label>
+        <select id="role">
+            <option value="Guest">Guest</option>
+            <option value="Staff">Staff</option>
+            <option value="Subcontractor">Subcontractor</option>
+        </select>
+    </div>
+    <div class="form-group">
+        <label>Password</label>
+        <input type="password" id="password" placeholder="Minimum 6 characters" onkeydown="if(event.key==='Enter')register()">
+    </div>
+    <button class="btn-primary" id="regBtn" onclick="register()">Create Account</button>
+    <p class="auth-link">Already have an account? <a href="Login.html">Sign in</a></p>
 </div>
-
 <script>
 var API = 'http://127.0.0.1:5000';
 
 function register() {
-  var fullName = document.getElementById('fullName').value.trim();
-  var email    = document.getElementById('email').value.trim();
-  var password = document.getElementById('password').value;
-  var role     = document.getElementById('role').value;
-  var btn      = document.getElementById('regBtn');
+    var firstName = document.getElementById('firstName').value.trim();
+    var surname   = document.getElementById('surname').value.trim();
+    var email     = document.getElementById('email').value.trim();
+    var role      = document.getElementById('role').value;
+    var password  = document.getElementById('password').value;
+    var btn       = document.getElementById('regBtn');
 
-  document.getElementById('errMsg').style.display = 'none';
+    document.getElementById('errMsg').style.display = 'none';
+    document.getElementById('okMsg').style.display  = 'none';
 
-  if (!fullName || !email || !password || !role) {
-    showErr('Please fill in all fields.');
-    return;
-  }
-
-  if (password.length < 6) {
-    showErr('Password must be at least 6 characters.');
-    return;
-  }
-
-  var parts = fullName.trim().split(' ');
-  var first = parts[0];
-  var last  = parts.slice(1).join(' ') || 'User';
-
-  btn.disabled    = true;
-  btn.textContent = 'Creating account...';
-
-  fetch(API + '/register', {
-    method:      'POST',
-    credentials: 'include',
-    headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify({
-      first_name: first,
-      surname:    last,
-      email:      email,
-      password:   password,
-      role:       role
-    })
-  })
-  .then(function(r) { return r.json(); })
-  .then(function(data) {
-    if (data.success) {
-      localStorage.setItem('user_id', data.user_id);
-      localStorage.setItem('role',    role);
-      localStorage.setItem('name',    fullName);
-      window.location.href = 'Dashboard.html';
-    } else {
-      showErr(data.message || 'Could not create account. Try a different email.');
-      btn.disabled    = false;
-      btn.textContent = 'Create Account';
+    if (!firstName || !surname || !email || !password) {
+        showErr('Please fill in all fields.'); return;
     }
-  })
-  .catch(function() {
-    showErr('Cannot connect to server. Make sure Server.py is running.');
-    btn.disabled    = false;
-    btn.textContent = 'Create Account';
-  });
+    if (password.length < 6) {
+        showErr('Password must be at least 6 characters.'); return;
+    }
+
+    btn.disabled = true; btn.textContent = 'Creating account...';
+
+    fetch(API + '/register', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            first_name: firstName, surname: surname,
+            email: email, role: role, password: password
+        })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.success) {
+            localStorage.setItem('user_id', data.user_id);
+            localStorage.setItem('role',    data.role);
+            localStorage.setItem('name',    data.name);
+            localStorage.setItem('email',   email);
+            window.location.href = 'Dashboard.html';
+        } else {
+            showErr(data.message || 'Registration failed.');
+            btn.disabled = false; btn.textContent = 'Create Account';
+        }
+    })
+    .catch(function() {
+        showErr('Cannot connect to server. Make sure Server.py is running.');
+        btn.disabled = false; btn.textContent = 'Create Account';
+    });
 }
 
 function showErr(msg) {
-  var e = document.getElementById('errMsg');
-  e.textContent   = msg;
-  e.style.display = 'block';
+    var el = document.getElementById('errMsg');
+    el.textContent = msg; el.style.display = 'block';
 }
 </script>
 </body>

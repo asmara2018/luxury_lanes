@@ -7,78 +7,88 @@
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
 <body>
-
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-    <nav class="nav-links">
-        <a href="Dashboard.html" class="current" >Dashboard</a>
-        <a href="ReportFault.html">Report Fault</a>
-        <a href="AssignJob.html">Assign Jobs</a>
-        <a href="View Requests.html">View Requests</a>
-        <a href="Analytics.html">Analytics</a>
-        <a href="Notifications.html">Notifications</a>
-        <a href="Feedback.html" >Feedback</a>
-    </nav>
-    <div class="nav-bottom">
-        <a href="Login.html">Log Out</a>
-    </div>
+    <nav class="nav-links" id="navLinks"></nav>
+    <div class="nav-bottom"><a href="Login.html" onclick="logout()">Log Out</a></div>
 </aside>
-
 <main class="content-area">
     <div class="page-header">
         <div>
             <h1>Dashboard Overview</h1>
-            <p>Maintenance Management System</p>
+            <p id="pageSubtitle">Maintenance Management System</p>
         </div>
         <div class="staff-info">
             <div class="staff-initial" id="userInitial">?</div>
-            <span id="userName">Loading...</span>
+            <span id="userName">User</span>
         </div>
     </div>
-
     <section class="request-summary">
         <div class="summary-tile">
-            <p>Total Requests</p>
-            <h2 id="totalCount">-</h2>
+            <p>Total Requests</p><h2 id="totalCount">-</h2>
         </div>
         <div class="summary-tile tile-urgent">
-            <p>High Priority</p>
-            <h2 id="highCount">-</h2>
+            <p>High Priority</p><h2 id="highCount">-</h2>
         </div>
         <div class="summary-tile tile-active">
-            <p>In Progress</p>
-            <h2 id="inProgressCount">-</h2>
+            <p>In Progress</p><h2 id="inProgressCount">-</h2>
         </div>
         <div class="summary-tile tile-resolved">
-            <p>Completed</p>
-            <h2 id="completedCount">-</h2>
+            <p>Completed</p><h2 id="completedCount">-</h2>
         </div>
     </section>
-
     <div class="fault-log">
         <h3>Recent Maintenance Requests</h3>
         <table>
             <thead>
-                <tr>
-                    <th>ID</th><th>Room</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th>
-                </tr>
+                <tr><th>ID</th><th>Room</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th></tr>
             </thead>
             <tbody id="recentTable">
-                <tr><td colspan="6" style="padding:14px 0; color:#9ca3af;">Loading...</td></tr>
+                <tr><td colspan="6" style="padding:14px 0;color:#9ca3af;text-align:center;">Loading...</td></tr>
             </tbody>
         </table>
     </div>
 </main>
-
-<script src="nav.js"></script>
 <script>
-var API = 'http://127.0.0.1:5000';
-buildNav('Dashboard.html');
+var API  = 'http://127.0.0.1:5000';
+var uid  = localStorage.getItem('user_id');
+var role = localStorage.getItem('role') || '';
+var name = localStorage.getItem('name') || 'User';
 
-function logout() {
-    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
-    localStorage.clear();
-}
+document.getElementById('userName').textContent    = name;
+document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+
+// Role-specific subtitle
+var subtitles = {
+    Guest: 'Your submitted maintenance requests',
+    Staff: 'Open and assigned maintenance requests',
+    Subcontractor: 'Jobs currently assigned to you',
+    Manager: 'All maintenance activity across the hotel'
+};
+document.getElementById('pageSubtitle').textContent = subtitles[role] || 'Maintenance Management System';
+
+(function buildNav() {
+    var links = [
+        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
+        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
+        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
+        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
+        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
+        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
+    ];
+    var nav = document.getElementById('navLinks');
+    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
+         .forEach(function(l) {
+             var a = document.createElement('a');
+             a.href = l.href; a.textContent = l.label;
+             if (l.href === 'Dashboard.html') a.className = 'current';
+             nav.appendChild(a);
+         });
+})();
+
+function logout() { fetch(API+'/logout',{method:'POST',credentials:'include'}); localStorage.clear(); }
 
 function priorityClass(p) {
     if (p === 'High')   return 'priority-tag priority-urgent';
@@ -87,21 +97,25 @@ function priorityClass(p) {
 }
 
 function loadDashboard() {
-    fetch(API + '/requests', { credentials: 'include' })
+    fetch(API + '/requests?user_id=' + uid, { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
-        if (!Array.isArray(data)) return;
+        if (!Array.isArray(data)) {
+            document.getElementById('recentTable').innerHTML =
+                '<tr><td colspan="6" style="color:#dc2626;padding:14px 0;text-align:center;">Could not load data. Is Server.py running?</td></tr>';
+            return;
+        }
         document.getElementById('totalCount').textContent      = data.length;
         document.getElementById('highCount').textContent       = data.filter(function(r){ return r.priority==='High'; }).length;
         document.getElementById('inProgressCount').textContent = data.filter(function(r){ return r.status==='In Progress'; }).length;
         document.getElementById('completedCount').textContent  = data.filter(function(r){ return r.status==='Completed'; }).length;
 
-        var recent = data.slice(0, 10);
-        if (recent.length === 0) {
-            document.getElementById('recentTable').innerHTML = '<tr><td colspan="6" style="padding:14px 0;color:#9ca3af;">No requests yet.</td></tr>';
+        if (data.length === 0) {
+            document.getElementById('recentTable').innerHTML =
+                '<tr><td colspan="6" style="padding:14px 0;color:#9ca3af;text-align:center;">No requests yet.</td></tr>';
             return;
         }
-        document.getElementById('recentTable').innerHTML = recent.map(function(r) {
+        document.getElementById('recentTable').innerHTML = data.slice(0, 10).map(function(r) {
             var date = r.report_time ? r.report_time.split(' ')[0] : '-';
             return '<tr><td>#'+r.id+'</td><td>Room '+r.room+'</td><td>'+r.title+'</td>' +
                 '<td><span class="'+priorityClass(r.priority)+'">'+r.priority+'</span></td>' +
@@ -110,11 +124,12 @@ function loadDashboard() {
     })
     .catch(function() {
         document.getElementById('recentTable').innerHTML =
-            '<tr><td colspan="6" style="color:#dc2626;padding:14px 0;">Cannot connect to server. Is Server.py running?</td></tr>';
+            '<tr><td colspan="6" style="color:#dc2626;padding:14px 0;text-align:center;">Cannot connect to server. Is Server.py running?</td></tr>';
     });
 }
 
 loadDashboard();
+setInterval(loadDashboard, 30000);
 </script>
 </body>
 </html>

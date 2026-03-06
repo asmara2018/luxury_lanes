@@ -6,55 +6,40 @@
 <title>View Requests - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <style>
-.filter-bar          { display:flex; gap:10px; margin-bottom:18px; flex-wrap:wrap; align-items:center; }
-.filter-bar input    { flex:1; min-width:180px; padding:9px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; font-family:Segoe UI,sans-serif; outline:none; }
-.filter-bar select   { padding:9px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; font-family:Segoe UI,sans-serif; outline:none; background:white; }
-.filter-bar button   { padding:9px 14px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; cursor:pointer; }
+.filter-bar { display:flex; gap:10px; margin-bottom:16px; flex-wrap:wrap; align-items:center; }
+.filter-bar input  { flex:1; min-width:160px; padding:9px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; outline:none; font-family:'Segoe UI',Arial,sans-serif; }
+.filter-bar select { padding:9px 12px; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; outline:none; background:white; font-family:'Segoe UI',Arial,sans-serif; }
+.filter-bar button { padding:9px 14px; background:#f3f4f6; border:1px solid #e5e7eb; border-radius:6px; font-size:13px; cursor:pointer; }
 .filter-bar button:hover { background:#e5e7eb; }
-.results-info        { font-size:12px; color:#6b7280; margin-bottom:10px; }
-.status-badge        { padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap; }
-.s-reported          { background:#e0e7ff; color:#3730a3; }
-.s-inprogress        { background:#fef3c7; color:#92400e; }
-.s-completed         { background:#d1fae5; color:#065f46; }
-.action-wrap         { display:flex; gap:6px; align-items:center; }
-.action-wrap select  { padding:5px 8px; border:1px solid #e5e7eb; border-radius:6px; font-size:12px; font-family:Segoe UI,sans-serif; outline:none; }
-.save-btn            { padding:5px 10px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer; }
-.save-btn:hover      { opacity:0.88; }
-.ok-msg  { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
-.err-msg { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:14px; }
+.results-info { font-size:12px; color:#6b7280; margin-bottom:8px; }
+.status-badge  { display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; white-space:nowrap; }
+.s-reported    { background:#e0e7ff; color:#3730a3; }
+.s-inprogress  { background:#fef3c7; color:#92400e; }
+.s-completed   { background:#d1fae5; color:#065f46; }
+.action-wrap   { display:flex; gap:6px; align-items:center; }
+.action-wrap select { padding:5px 8px; border:1px solid #e5e7eb; border-radius:6px; font-size:12px; outline:none; }
+.save-btn { padding:5px 12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:12px; cursor:pointer; font-family:'Segoe UI',Arial,sans-serif; }
+.save-btn:hover { opacity:0.88; }
 tbody td { vertical-align:middle; }
 </style>
 </head>
 <body>
-
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-    <nav class="nav-links">
-        <a href="Dashboard.html">Dashboard</a>
-        <a href="ReportFault.html">Report Fault</a>
-        <a href="AssignJob.html">Assign Jobs</a>
-        <a href="View Requests.html" class="current">View Requests</a>
-        <a href="Analytics.html">Analytics</a>
-        <a href="Notifications.html">Notifications</a>
-        <a href="Feedback.html" >Feedback</a>
-    </nav>
-    <div class="nav-bottom">
-        <a href="Login.html">Log Out</a>
-    </div>
+    <nav class="nav-links" id="navLinks"></nav>
+    <div class="nav-bottom"><a href="Login.html" onclick="logout()">Log Out</a></div>
 </aside>
-
 <main class="content-area">
     <div class="page-header">
         <div>
             <h1>View Requests</h1>
-            <p>Browse and manage all maintenance requests</p>
+            <p id="pageSubtitle">Browse and manage maintenance requests</p>
         </div>
         <div class="staff-info">
             <div class="staff-initial" id="userInitial">?</div>
-            <span id="userName">Loading...</span>
+            <span id="userName">User</span>
         </div>
     </div>
-
     <div class="fault-log">
         <div class="filter-bar">
             <input type="text" id="searchBox" placeholder="Search room or title..." oninput="applyFilters()">
@@ -72,11 +57,9 @@ tbody td { vertical-align:middle; }
             </select>
             <button onclick="clearFilters()">Clear</button>
         </div>
-
         <div id="okMsg"  class="ok-msg"></div>
         <div id="errMsg" class="err-msg"></div>
         <div id="resultsInfo" class="results-info"></div>
-
         <table>
             <thead>
                 <tr>
@@ -90,26 +73,47 @@ tbody td { vertical-align:middle; }
         </table>
     </div>
 </main>
-
-<script src="nav.js"></script>
 <script>
 var API         = 'http://127.0.0.1:5000';
+var uid         = localStorage.getItem('user_id');
+var role        = localStorage.getItem('role') || '';
+var name        = localStorage.getItem('name') || 'User';
 var allRequests = [];
-var userRole    = localStorage.getItem('role') || '';
 
-buildNav('View Requests.html');
+document.getElementById('userName').textContent    = name;
+document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
 
-function logout() {
-    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
-    localStorage.clear();
-}
+var subtitles = { Guest: 'Your submitted requests', Staff: 'Open and assigned requests', Manager: 'All hotel maintenance requests' };
+if (subtitles[role]) document.getElementById('pageSubtitle').textContent = subtitles[role];
+
+(function buildNav() {
+    var links = [
+        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
+        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
+        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
+        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
+        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
+        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
+        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
+    ];
+    var nav = document.getElementById('navLinks');
+    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
+         .forEach(function(l) {
+             var a = document.createElement('a');
+             a.href = l.href; a.textContent = l.label;
+             if (l.href === 'View Requests.html') a.className = 'current';
+             nav.appendChild(a);
+         });
+})();
+
+function logout() { fetch(API+'/logout',{method:'POST',credentials:'include'}); localStorage.clear(); }
 
 function priorityClass(p) {
     if (p==='High')   return 'priority-tag priority-urgent';
     if (p==='Medium') return 'priority-tag priority-standard';
     return 'priority-tag priority-minor';
 }
-
 function statusClass(s) {
     if (s==='Reported')    return 'status-badge s-reported';
     if (s==='In Progress') return 'status-badge s-inprogress';
@@ -117,7 +121,7 @@ function statusClass(s) {
 }
 
 function loadRequests() {
-    fetch(API + '/requests', { credentials: 'include' })
+    fetch(API + '/requests?user_id=' + uid, { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (!Array.isArray(data)) { showErr('Could not load requests. Please log in again.'); return; }
@@ -135,7 +139,7 @@ function applyFilters() {
     var status   = document.getElementById('filterStatus').value;
     var priority = document.getElementById('filterPriority').value;
     var filtered = allRequests.filter(function(r) {
-        return (!search   || r.room.toLowerCase().includes(search) || r.title.toLowerCase().includes(search)) &&
+        return (!search   || r.room.toLowerCase().indexOf(search)!=-1 || r.title.toLowerCase().indexOf(search)!=-1) &&
                (!status   || r.status   === status) &&
                (!priority || r.priority === priority);
     });
@@ -143,8 +147,8 @@ function applyFilters() {
 }
 
 function clearFilters() {
-    document.getElementById('searchBox').value = '';
-    document.getElementById('filterStatus').value = '';
+    document.getElementById('searchBox').value      = '';
+    document.getElementById('filterStatus').value   = '';
     document.getElementById('filterPriority').value = '';
     renderTable(allRequests);
 }
@@ -156,27 +160,29 @@ function renderTable(list) {
         tbody.innerHTML = '<tr><td colspan="10" style="padding:16px 0;color:#9ca3af;text-align:center;">No requests match your filters.</td></tr>';
         return;
     }
-    var canUpdate = (userRole==='Staff'||userRole==='Subcontractor'||userRole==='Manager');
     tbody.innerHTML = list.map(function(r) {
         var date       = r.report_time ? r.report_time.split(' ')[0] : '-';
         var reportedBy = r.reporter_name || '-';
-        var assignedTo = r.assigned_name || '<span style="color:#9ca3af;">Unassigned</span>';
-        var desc       = r.description ? (r.description.length>50 ? r.description.substring(0,50)+'...' : r.description) : '-';
-        var updateCell = '&#8212;';
-        if (canUpdate && r.status !== 'Completed') {
-            updateCell = '<div class="action-wrap">' +
-                '<select id="sel-'+r.id+'">' +
-                '<option value="Reported"'+(r.status==='Reported'?' selected':'')+'>Reported</option>' +
-                '<option value="In Progress"'+(r.status==='In Progress'?' selected':'')+'>In Progress</option>' +
-                '<option value="Completed">Completed</option>' +
-                '</select>' +
+        var assignedTo = r.assigned_name || '<span style="color:#9ca3af;font-style:italic;">Unassigned</span>';
+        var desc       = r.description ? (r.description.length>50 ? r.description.substring(0,50)+'…' : r.description) : '-';
+        var updateCell = '—';
+
+        var canUpdate = (role==='Manager' || role==='Staff') && r.status !== 'Completed';
+        if (canUpdate) {
+            var opts = '<option value="Reported"'  +(r.status==='Reported'   ?' selected':'')+'>Reported</option>';
+            opts    += '<option value="In Progress"'+(r.status==='In Progress'?' selected':'')+'>In Progress</option>';
+            opts    += '<option value="Completed"'  +(r.status==='Completed'  ?' selected':'')+'>Completed</option>';
+            updateCell = '<div class="action-wrap"><select id="sel-'+r.id+'">'+opts+'</select>' +
                 '<button class="save-btn" onclick="saveStatus('+r.id+')">Save</button></div>';
         }
-        return '<tr><td>#'+r.id+'</td><td>Room '+r.room+'</td><td>'+r.title+'</td>' +
+
+        return '<tr>' +
+            '<td>#'+r.id+'</td><td>Room '+r.room+'</td><td>'+r.title+'</td>' +
             '<td style="color:#6b7280;font-size:12px;">'+desc+'</td>' +
             '<td><span class="'+priorityClass(r.priority)+'">'+r.priority+'</span></td>' +
             '<td><span class="'+statusClass(r.status)+'">'+r.status+'</span></td>' +
-            '<td>'+reportedBy+'</td><td>'+assignedTo+'</td><td>'+date+'</td><td>'+updateCell+'</td></tr>';
+            '<td>'+reportedBy+'</td><td>'+assignedTo+'</td><td>'+date+'</td><td>'+updateCell+'</td>' +
+            '</tr>';
     }).join('');
 }
 
@@ -185,7 +191,7 @@ function saveStatus(id) {
     fetch(API + '/requests/'+id+'/status', {
         method: 'PUT', credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify({ status: newStatus, user_id: uid })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
@@ -202,7 +208,7 @@ function saveStatus(id) {
 function showOk(msg) {
     var el=document.getElementById('okMsg'); el.textContent=msg; el.style.display='block';
     document.getElementById('errMsg').style.display='none';
-    setTimeout(function(){ el.style.display='none'; }, 3000);
+    setTimeout(function(){ el.style.display='none'; }, 3500);
 }
 function showErr(msg) {
     var el=document.getElementById('errMsg'); el.textContent=msg; el.style.display='block';
@@ -210,6 +216,7 @@ function showErr(msg) {
 }
 
 loadRequests();
+setInterval(loadRequests, 30000);
 </script>
 </body>
 </html>
