@@ -6,6 +6,11 @@ import secrets
 
 app = Flask(__name__)
 app.secret_key = "luxury_lanes_secret_2024"
+
+
+app.config["SESSION_COOKIE_SAMESITE"] = "None"
+app.config["SESSION_COOKIE_SECURE"] = False
+
 CORS(app, supports_credentials=True, origins=[
     "null",
     "http://127.0.0.1:5500",
