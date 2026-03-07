@@ -1,135 +1,169 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Dashboard - Luxury Lanes</title>
-<link rel="stylesheet" href="CSS Luxury Lanes.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Luxury Lanes</title>
+    <link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
 <body>
+
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
     <nav class="nav-links" id="navLinks"></nav>
-    <div class="nav-bottom"><a href="Login.html" onclick="logout()">Log Out</a></div>
-</aside>
-<main class="content-area">
-    <div class="page-header">
-        <div>
-            <h1>Dashboard Overview</h1>
-            <p id="pageSubtitle">Maintenance Management System</p>
-        </div>
-        <div class="staff-info">
-            <div class="staff-initial" id="userInitial">?</div>
-            <span id="userName">User</span>
-        </div>
+    <div class="nav-bottom">
+        <a href="Login.html">Log Out</a>
     </div>
+</aside>
+
+<main class="content-area">
+
+    <div class="page-header">
+        <h1>Dashboard Overview</h1>
+        <p>Maintenance Management System</p>
+    </div>
+
+    <!-- Four tiles showing a summary of all maintenance requests -->
     <section class="request-summary">
+
+        <!-- Total tile has no colour border as it shows all requests -->
         <div class="summary-tile">
-            <p>Total Requests</p><h2 id="totalCount">-</h2>
+            <p>Total Requests</p>
+            <!-- id used so JavaScript can update this number with live data -->
+            <h2 id="totalCount">-</h2>
         </div>
+
+        <!-- Red border to highlight urgent high priority requests -->
         <div class="summary-tile tile-urgent">
-            <p>High Priority</p><h2 id="highCount">-</h2>
+            <p>High Priority</p>
+            <h2 id="highCount">-</h2>
         </div>
+
+        <!-- Amber border to show requests currently being worked on -->
         <div class="summary-tile tile-active">
-            <p>In Progress</p><h2 id="inProgressCount">-</h2>
+            <p>In Progress</p>
+            <h2 id="inProgressCount">-</h2>
         </div>
+
+        <!-- Green border as green represents successfully completed tasks -->
         <div class="summary-tile tile-resolved">
-            <p>Completed</p><h2 id="completedCount">-</h2>
+            <p>Completed</p>
+            <h2 id="completedCount">-</h2>
         </div>
+
     </section>
+
+    <!-- Table showing all maintenance requests from the database -->
     <div class="fault-log">
         <h3>Recent Maintenance Requests</h3>
         <table>
+            <!-- thead holds the column headings -->
             <thead>
-                <tr><th>ID</th><th>Room</th><th>Title</th><th>Priority</th><th>Status</th><th>Date</th></tr>
+                <tr>
+                    <th>ID</th>
+                    <th>Room</th>
+                    <th>Title</th>
+                    <th>Priority</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                </tr>
             </thead>
-            <tbody id="recentTable">
-                <tr><td colspan="6" style="padding:14px 0;color:#9ca3af;text-align:center;">Loading...</td></tr>
+            <!-- id used so JavaScript can inject live rows into the table -->
+            <tbody id="requestTable">
+                <!-- shown to the user while the data is being fetched -->
+                <tr><td colspan="6">Loading...</td></tr>
             </tbody>
         </table>
     </div>
+
 </main>
+
 <script>
-var API  = 'http://127.0.0.1:5000';
-var uid  = localStorage.getItem('user_id');
-var role = localStorage.getItem('role') || '';
-var name = localStorage.getItem('name') || 'User';
 
-document.getElementById('userName').textContent    = name;
-document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+    // Read the user ID and role that were saved when the user logged in
+    var userId = localStorage.getItem('user_id');
+    var role = localStorage.getItem('role');
 
-// Role-specific subtitle
-var subtitles = {
-    Guest: 'Your submitted maintenance requests',
-    Staff: 'Open and assigned maintenance requests',
-    Subcontractor: 'Jobs currently assigned to you',
-    Manager: 'All maintenance activity across the hotel'
-};
-document.getElementById('pageSubtitle').textContent = subtitles[role] || 'Maintenance Management System';
+    // If nobody is logged in send them back to the login page
+    if (!userId) {
+        window.location.href = 'Login.html';
+    }
 
-(function buildNav() {
-    var links = [
-        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
-        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
-        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
-        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
-        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
-        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
-    ];
+    // Find the nav element on the page so links can be added into it
     var nav = document.getElementById('navLinks');
-    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
-         .forEach(function(l) {
-             var a = document.createElement('a');
-             a.href = l.href; a.textContent = l.label;
-             if (l.href === 'Dashboard.html') a.className = 'current';
-             nav.appendChild(a);
-         });
-})();
 
-function logout() { fetch(API+'/logout',{method:'POST',credentials:'include'}); localStorage.clear(); }
+    // Dashboard shown to every role so no if statement needed
+    nav.innerHTML += '<a href="Dashboard.html" class="current">Dashboard</a>';
 
-function priorityClass(p) {
-    if (p === 'High')   return 'priority-tag priority-urgent';
-    if (p === 'Medium') return 'priority-tag priority-standard';
-    return 'priority-tag priority-minor';
-}
+    // Only Guest, Staff and Manager can report and view requests
+    if (role === 'Guest' || role === 'Staff' || role === 'Manager') {
+        nav.innerHTML += '<a href="ReportFault.html">Report Fault</a>';
+        nav.innerHTML += '<a href="ViewRequests.html">View Requests</a>';
+    }
 
-function loadDashboard() {
-    fetch(API + '/requests?user_id=' + uid, { credentials: 'include' })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (!Array.isArray(data)) {
-            document.getElementById('recentTable').innerHTML =
-                '<tr><td colspan="6" style="color:#dc2626;padding:14px 0;text-align:center;">Could not load data. Is Server.py running?</td></tr>';
-            return;
-        }
-        document.getElementById('totalCount').textContent      = data.length;
-        document.getElementById('highCount').textContent       = data.filter(function(r){ return r.priority==='High'; }).length;
-        document.getElementById('inProgressCount').textContent = data.filter(function(r){ return r.status==='In Progress'; }).length;
-        document.getElementById('completedCount').textContent  = data.filter(function(r){ return r.status==='Completed'; }).length;
+    // Only Subcontractors see My Jobs as they are assigned work
+    if (role === 'Subcontractor') {
+        nav.innerHTML += '<a href="ViewJobs.html">My Jobs</a>';
+    }
 
-        if (data.length === 0) {
-            document.getElementById('recentTable').innerHTML =
-                '<tr><td colspan="6" style="padding:14px 0;color:#9ca3af;text-align:center;">No requests yet.</td></tr>';
-            return;
-        }
-        document.getElementById('recentTable').innerHTML = data.slice(0, 10).map(function(r) {
-            var date = r.report_time ? r.report_time.split(' ')[0] : '-';
-            return '<tr><td>#'+r.id+'</td><td>Room '+r.room+'</td><td>'+r.title+'</td>' +
-                '<td><span class="'+priorityClass(r.priority)+'">'+r.priority+'</span></td>' +
-                '<td>'+r.status+'</td><td>'+date+'</td></tr>';
-        }).join('');
+    // Only Staff and Manager can assign jobs to subcontractors
+    if (role === 'Staff' || role === 'Manager') {
+        nav.innerHTML += '<a href="AssignJob.html">Assign Jobs</a>';
+    }
+
+    // Only Manager can view Analytics as it contains sensitive system data
+    if (role === 'Manager') {
+        nav.innerHTML += '<a href="Analytics.html">Analytics</a>';
+    }
+
+    // Notifications and Feedback shown to every role
+    nav.innerHTML += '<a href="Notifications.html">Notifications</a>';
+    nav.innerHTML += '<a href="Feedback.html">Feedback</a>';
+
+    // Send a request to the Flask backend to get live data using the address that Flask actually runs on
+    //"requests"is the route defined in Server.py
+    // user_id= passes the logged in user so Flask returns the right data
+    fetch('http://127.0.0.1:5000/requests?user_id=' + userId)
+    .then(function(response) {
+        // Convert the Flask response into a JavaScript array
+        return response.json();
     })
-    .catch(function() {
-        document.getElementById('recentTable').innerHTML =
-            '<tr><td colspan="6" style="color:#dc2626;padding:14px 0;text-align:center;">Cannot connect to server. Is Server.py running?</td></tr>';
-    });
-}
+    .then(function(data) {
+        // Start all counters at zero
+        var high = 0;
+        var inProgress = 0;
+        var completed = 0;
 
-loadDashboard();
-setInterval(loadDashboard, 30000);
+        // Loop through every request and add 1 to the correct counter
+        for (var i = 0; i < data.length; i++) {
+            if (data[i].priority === 'High')      high++;
+            if (data[i].status === 'In Progress') inProgress++;
+            if (data[i].status === 'Completed')   completed++;
+        }
+
+        // Put the real numbers into the four tiles
+        document.getElementById('totalCount').textContent      = data.length;
+        document.getElementById('highCount').textContent       = high;
+        document.getElementById('inProgressCount').textContent = inProgress;
+        document.getElementById('completedCount').textContent  = completed;
+
+        // Build one table row for each request returned by Flask
+        var rows = '';
+        for (var i = 0; i < data.length; i++) {
+            rows += '<tr><td>#' + data[i].id + '</td>';
+            rows += '<td>' + data[i].room + '</td>';
+            rows += '<td>' + data[i].title + '</td>';
+            rows += '<td>' + data[i].priority + '</td>';
+            rows += '<td>' + data[i].status + '</td>';
+            rows += '<td>' + data[i].report_time + '</td></tr>';
+        }
+
+        // Replace the loading placeholder with the real table rows
+        document.getElementById('requestTable').innerHTML = rows;
+
+    });
+
 </script>
+
 </body>
 </html>
