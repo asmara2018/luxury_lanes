@@ -1,46 +1,33 @@
 <!DOCTYPE html>
-<!-- html5 document -->
 <html lang="en">
 <head>
-<!-- so special characters work -->
 <meta charset="UTF-8">
-<!-- makes it work on mobile too -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Report Fault - Luxury Lanes</title>
-<!-- shared css used on every page -->
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 <style>
-/* stops the form getting too wide on big screens */
 .fault-form { max-width: 580px; }
-
-/* styling for the submit button */
 .submit-btn {
     width: 100%; padding: 12px; background: #2563eb; color: white;
     border: none; border-radius: 7px; font-size: 14px; font-weight: 600;
     cursor: pointer; margin-top: 6px; font-family: 'Segoe UI', Arial, sans-serif;
     transition: background 0.15s;
 }
-/* slightly darker when you hover over it */
 .submit-btn:hover    { background: #1d4ed8; }
-/* goes faded when disabled so user knows its processing */
 .submit-btn:disabled { opacity: 0.6; cursor: default; }
 </style>
 </head>
 <body>
 
-<!-- left sidebar navigation -->
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-    <!-- navigation links get added here by buildNav() in the script -->
     <nav class="nav-links" id="navLinks"></nav>
     <div class="nav-bottom">
-        <!-- calls logout() to clear stored data before going back to login -->
         <a href="Login.html" onclick="logout()">Log Out</a>
     </div>
 </aside>
 
 <main class="content-area">
-    <!-- page title at the top -->
     <div class="page-header">
         <div>
             <h1>Report Fault</h1>
@@ -48,176 +35,130 @@
         </div>
     </div>
 
-    <!-- white card that holds the form -->
     <div class="fault-log fault-form">
         <h3>New Fault Report</h3><br>
-
-        <!-- success message, hidden until form submits ok -->
         <div id="okMsg"  class="ok-msg"></div>
-        <!-- error message, hidden until something goes wrong -->
         <div id="errMsg" class="err-msg"></div>
-
-        <!-- room number input -->
         <div class="form-group">
             <label>Room Number</label>
-            <!-- id="room"So I can use in Javascript-->
             <input type="text" id="room" placeholder="e.g. 101">
         </div>
-
-        <!-- short title for the fault -->
         <div class="form-group">
             <label>Issue Title</label>
-            <!-- id="title" used when reading the field in submitFault() -->
             <input type="text" id="title" placeholder="e.g. Broken air conditioning">
         </div>
-
-        <!-- longer description - textarea so it can be multiple lines -->
         <div class="form-group">
             <label>Description</label>
             <textarea id="description" placeholder="Describe the fault in detail..."></textarea>
         </div>
-
-        <!-- priority dropdown - only 3 options matching what the database accepts -->
         <div class="form-group">
             <label>Priority</label>
-            <!-- using select so user cant type invalid values -->
             <select id="priority">
-                <!-- value is what gets sent to flask, the text is just what the user sees -->
-                <option value="Low">Low — Minor inconvenience</option>
-                <!-- medium is default since most faults arent urgent -->
-                <option value="Medium" selected>Medium — Needs attention soon</option>
-                <option value="High">High — Urgent, affects safety or comfort</option>
+                <option value="Low">Low - Minor inconvenience</option>
+                <option value="Medium" selected>Medium - Needs attention soon</option>
+                <option value="High">High - Urgent, affects safety or comfort</option>
             </select>
         </div>
-
-        <!-- clicking this runs submitFault() -->
         <button class="submit-btn" id="submitBtn" onclick="submitFault()">Submit Fault Report</button>
     </div>
-
 </main>
 
 <script>
-// flask backend u
-var API  = 'http://127.0.0.1:5000';
 
-// get user info that was stored when they logged in
-var uid  = localStorage.getItem('user_id');
-var role = localStorage.getItem('role') || '';
-var name = localStorage.getItem('name') || 'User';
+    // get the current users details that were saved when they logged in
+    var userId = localStorage.getItem('user_id');
+    var role   = localStorage.getItem('role');
 
-// builds the sidebar links based on the users role
-(function buildNav() {
-    var links = [
-        // everyone can see dashboard
-        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
-        // subcontractors dont report faults so they dont get this link
-        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
-        // only staff and managers can assign jobs
-        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
-        // my jobs is only for subcontractors
-        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
-        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
-        // analytics is manager only as it has sensitive data
-        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
-        // everyone gets notifications and feedback
-        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
-    ];
+    // if nobody is logged in send them back to the login page
+    if (!userId)      {
+        window.location.href = 'Login.html';
+    }
 
+    // build nav links based on role
     var nav = document.getElementById('navLinks');
 
-    // filter removes links the user shouldnt see, then forEach adds each one to the nav
-    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
-         .forEach(function(l) {
-             var a = document.createElement('a');
-             a.href = l.href;
-             a.textContent = l.label;
-             // current highlights the active page in the sidebar
-             if (l.href === 'ReportFault.html') a.className = 'current';
-             nav.appendChild(a);
-         });
-})();
+    nav.innerHTML += '<a href="Dashboard.html">Dashboard</a>';
 
-// clears stored login data and ends the session on the server
-function logout() {
-    fetch(API + '/logout', { method: 'POST', credentials: 'include' });
-    localStorage.clear();
-}
+    if (role === 'Guest' || role === 'Staff' || role === 'Manager') {
+        nav.innerHTML += '<a href="ReportFault.html" class="current">Report Fault</a>';
+        nav.innerHTML += '<a href="View Requests.html">View Requests</a>';
+    }
 
-function submitFault() {
-    // read all the form fields, trim removes extra spaces
-    var room        = document.getElementById('room').value.trim();
-    var title       = document.getElementById('title').value.trim();
-    var description = document.getElementById('description').value.trim();
-    var priority    = document.getElementById('priority').value;
-    var btn         = document.getElementById('submitBtn');
+    if (role === 'Subcontractor') {
+        nav.innerHTML += '<a href="ViewJobs.html">My Jobs</a>';
+    }
 
-    // hide old messages before checking again
-    document.getElementById('okMsg').style.display  = 'none';
-    document.getElementById('errMsg').style.display = 'none';
+    if (role === 'Staff' || role === 'Manager') {
+        nav.innerHTML += '<a href="AssignJob.html">Assign Jobs</a>';
+    }
 
-    // check all fields are filled before sending anything
-    if (!room)        { showErr('Please enter a room number.'); return; }
-    if (!title)       { showErr('Please enter an issue title.'); return; }
-    if (!description) { showErr('Please enter a description.'); return; }
+    if (role === 'Manager') {
+        nav.innerHTML += '<a href="Analytics.html">Analytics</a>';
+    }
 
-    // disable button so user cant submit twice
-    btn.disabled = true;
-    btn.textContent = 'Submitting...';
+    nav.innerHTML += '<a href="Notifications.html">Notifications</a>';
+    nav.innerHTML += '<a href="Feedback.html">Feedback</a>';
 
-    // post the form data to flask as json
-    fetch(API + '/report-fault', {
-        method: 'POST',
-        credentials: 'include',     // sends session cookie so flask knows who is logged in
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-            room:        room,
-            title:       title,
-            description: description,
-            priority:    priority,
-            user_id:     uid        // sent as backup in case session cookie isnt available
-        })
-    })
-    .then(function(r) { return r.json(); })  // turn flask response into a js object
-    .then(function(data) {
-        if (data.success) {
-            // show the reference number so the user can track the request
-            showOk('Fault reported successfully. Your reference number is #' + data.request_id);
-            // clear the form ready for another submission
-            document.getElementById('room').value        = '';
-            document.getElementById('title').value       = '';
-            document.getElementById('description').value = '';
-            document.getElementById('priority').value    = 'Medium';
-        } else {
-            showErr(data.message || 'Could not submit. Please try again.');
+    function logout() {
+        fetch('http://127.0.0.1:5000/logout', { method: 'POST', credentials: 'include' });
+        localStorage.clear();
+    }
+
+    // runs when the submit button is clicked
+    function submitFault() {
+
+        // get the values from the form fields
+        var room        = document.getElementById('room').value.trim();
+        var title       = document.getElementById('title').value.trim();
+        var description = document.getElementById('description').value.trim();
+        var priority    = document.getElementById('priority').value;
+
+        // check all fields are filled before sending anything
+        if (room === '') {
+            alert('Please enter a room number.');
+            return;
         }
-        // re-enable button either way
-        btn.disabled = false;
-        btn.textContent = 'Submit Fault Report';
-    })
-    .catch(function() {
-        // runs if server cant be reached at all
-        showErr('Cannot connect to server. Is Server.py running?');
-        btn.disabled = false;
-        btn.textContent = 'Submit Fault Report';
-    });
-}
 
-// shows green success message and hides red error
-function showOk(msg) {
-    var e = document.getElementById('okMsg');
-    e.textContent = msg;
-    e.style.display = 'block';
-    document.getElementById('errMsg').style.display = 'none';
-}
+        if (title === '') {
+            alert('Please enter an issue title.');
+            return;
+        }
 
-// shows red error message and hides green success
-function showErr(msg) {
-    var e = document.getElementById('errMsg');
-    e.textContent = msg;
-    e.style.display = 'block';
-    document.getElementById('okMsg').style.display = 'none';
-}
+        if (description === '') {
+            alert('Please enter a description.');
+            return;
+        }
+
+        // send the data to the Flask backend
+        fetch('http://127.0.0.1:5000/report-fault', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                user_id:     userId,
+                room:        room,
+                title:       title,
+                description: description,
+                priority:    priority
+            })
+        })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                alert('Fault reported successfully. Reference number is #' + data.request_id);
+                window.location.href = 'Dashboard.html';
+            } else {
+                alert('Something went wrong. Please try again.');
+            }
+        })
+        .catch(function() {
+            alert('Cannot connect to server. Is Server.py running?');
+        });
+
+    }
+
 </script>
 </body>
 </html>

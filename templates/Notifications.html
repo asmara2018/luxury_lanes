@@ -49,75 +49,109 @@
     </div>
 </main>
 <script>
-var API  = 'http://127.0.0.1:5000';
-var uid  = localStorage.getItem('user_id');
-var role = localStorage.getItem('role') || '';
-var name = localStorage.getItem('name') || 'User';
 
-document.getElementById('userName').textContent    = name;
-document.getElementById('userInitial').textContent = name.charAt(0).toUpperCase();
+    var API  = 'http://127.0.0.1:5000';
+    var uid  = localStorage.getItem('user_id');
+    var role = localStorage.getItem('role');
 
-(function buildNav() {
-    var links = [
-        { href: 'Dashboard.html',       label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'ReportFault.html',     label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
-        { href: 'AssignJob.html',       label: 'Assign Jobs',   roles: ['Staff','Manager'] },
-        { href: 'ViewJobs.html',        label: 'My Jobs',       roles: ['Subcontractor'] },
-        { href: 'View Requests.html',   label: 'View Requests', roles: ['Guest','Staff','Manager'] },
-        { href: 'Analytics.html',       label: 'Analytics',     roles: ['Manager'] },
-        { href: 'Notifications.html',   label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'Feedback.html',        label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
-    ];
+    // build nav links based on role
     var nav = document.getElementById('navLinks');
-    links.filter(function(l) { return l.roles.indexOf(role) !== -1; })
-         .forEach(function(l) {
-             var a = document.createElement('a');
-             a.href = l.href; a.textContent = l.label;
-             if (l.href === 'Notifications.html') a.className = 'current';
-             nav.appendChild(a);
-         });
-})();
 
-function logout() { fetch(API+'/logout',{method:'POST',credentials:'include'}); localStorage.clear(); }
+    nav.innerHTML += '<a href="Dashboard.html">Dashboard</a>';
 
-function loadNotifications() {
-    fetch(API + '/notifications?user_id=' + uid, { credentials: 'include' })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        var list   = data.notifications || [];
-        var unread = data.unread_count  || 0;
-        document.getElementById('unreadLabel').textContent =
-            unread > 0 ? unread + ' unread notification(s)' : 'All caught up — no unread notifications';
-        var container = document.getElementById('notifList');
-        if (list.length === 0) {
-            container.innerHTML = '<div style="padding:32px 0;color:#9ca3af;font-size:13px;text-align:center;">No notifications yet.</div>';
-            return;
-        }
-        container.innerHTML = list.map(function(n) {
-            var time     = n.created_at ? n.created_at.replace('T',' ').split('.')[0] : '-';
-            var typeClass = 'type-' + (n.type || 'Update').split(' ')[0];
-            return '<div class="notif-item ' + (n.is_read ? 'read' : 'unread') + '">' +
-                '<div class="notif-type ' + typeClass + '">' + (n.type || 'Update') + '</div>' +
-                '<div class="notif-message">' + n.message + '</div>' +
-                '<div class="notif-time">' + time + '</div>' +
-                '</div>';
-        }).join('');
-    })
-    .catch(function() {
-        document.getElementById('notifList').innerHTML =
-            '<div style="color:#dc2626;padding:24px 0;text-align:center;">Cannot connect to server.</div>';
-    });
-}
+    if (role === 'Guest' || role === 'Staff' || role === 'Manager') {
+        nav.innerHTML += '<a href="ReportFault.html">Report Fault</a>';
+        nav.innerHTML += '<a href="View Requests.html">View Requests</a>';
+    }
 
-function markAllRead() {
-    // Pass user_id as query param for file:// fallback
-    fetch(API + '/notifications/read?user_id=' + uid, { method: 'PUT', credentials: 'include' })
-    .then(function(r) { return r.json(); })
-    .then(function(data) { if (data.success) loadNotifications(); });
-}
+    if (role === 'Subcontractor') {
+        nav.innerHTML += '<a href="ViewJobs.html">My Jobs</a>';
+    }
 
-loadNotifications();
-setInterval(loadNotifications, 30000);
+    if (role === 'Staff' || role === 'Manager') {
+        nav.innerHTML += '<a href="AssignJob.html">Assign Jobs</a>';
+    }
+
+    if (role === 'Manager') {
+        nav.innerHTML += '<a href="Analytics.html">Analytics</a>';
+    }
+
+    nav.innerHTML += '<a href="Notifications.html" class="current">Notifications</a>';
+    nav.innerHTML += '<a href="Feedback.html">Feedback</a>';
+
+    function logout() {
+        fetch(API + '/logout', { method: 'POST', credentials: 'include' });
+        localStorage.clear();
+    }
+
+    // fetch notifications from flask and display them
+    function loadNotifications() {
+
+        fetch(API + '/notifications?user_id=' + uid, { credentials: 'include' })
+
+        .then(function(response) {
+            return response.json();
+        })
+
+        .then(function(data) {
+
+            var list   = data.notifications || [];
+            var unread = data.unread_count  || 0;
+
+            // update the unread count label at the top
+            if (unread > 0) {
+                document.getElementById('unreadLabel').textContent = unread + ' unread notification(s)';
+            } else {
+                document.getElementById('unreadLabel').textContent = 'All caught up - no unread notifications';
+            }
+
+            var container = document.getElementById('notifList');
+
+            // show a message if there are no notifications
+            if (list.length === 0) {
+                container.innerHTML = '<p>No notifications yet.</p>';
+                return;
+            }
+
+            // build the notification items
+            var html = '';
+
+            for (var i = 0; i < list.length; i++) {
+                var n    = list[i];
+                var time = n.created_at ? n.created_at.replace('T', ' ') : '-';
+                var readClass = n.is_read ? 'read' : 'unread';
+
+                html += '<div class="notif-item ' + readClass + '">';
+                html += '<div class="notif-type">'    + n.type    + '</div>';
+                html += '<div class="notif-message">' + n.message + '</div>';
+                html += '<div class="notif-time">'    + time      + '</div>';
+                html += '</div>';
+            }
+
+            container.innerHTML = html;
+        })
+
+        .catch(function() {
+            document.getElementById('notifList').innerHTML = '<p>Cannot connect to server.</p>';
+        });
+    }
+
+    // mark all notifications as read then reload the list
+    function markAllRead() {
+        fetch(API + '/notifications/read?user_id=' + uid, { method: 'PUT', credentials: 'include' })
+        .then(function(response) {
+            return response.json();
+        })
+        .then(function(data) {
+            if (data.success) {
+                loadNotifications();
+            }
+        });
+    }
+
+    loadNotifications();
+
+
 </script>
 </body>
 </html>
