@@ -162,7 +162,7 @@ function loadDashboard() {
 
     .catch(function() {
         document.getElementById('requestTable').innerHTML =
-            '<tr><td>Cannot connect to server. Is Server.py running?</td></tr>';
+            '<tr><td colspan="6">Cannot connect to server. Is Server.py running?</td></tr>';
     });
 
 }

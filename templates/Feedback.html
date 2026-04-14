@@ -41,7 +41,7 @@
     <h2>Luxury Lanes</h2>
     <nav class="nav-links" id="navLinks"></nav>
     <div class="nav-bottom">
-        <a href="Login.html">Log Out</a>
+        <a href="Login.html" onclick="logout()">Log Out</a>
     </div>
 </aside>
 
@@ -102,10 +102,7 @@
     var currentUserId = localStorage.getItem("user_id");
     var currentRole   = localStorage.getItem("role");
 
-
-
     // build navigation menu depending on the users role
-
     var nav = document.getElementById("navLinks");
 
     nav.innerHTML += "<a href='Dashboard.html'>Dashboard</a>";
@@ -138,20 +135,19 @@
     nav.innerHTML += "<a href='Notifications.html'>Notifications</a>";
     nav.innerHTML += "<a href='Feedback.html' class='current'>Feedback</a>";
 
-
+    function logout() {
+        fetch(serverAddress + "/logout", { method: "POST", credentials: "include" });
+        localStorage.clear();
+    }
 
     // load completed requests for the dropdown
-
-    fetch(serverAddress + currentUserId)
+    fetch(serverAddress + "/requests?user_id=" + currentUserId, { credentials: "include" })
 
     .then(function(response) {
 
         return response.json();
 
     })
-
-
-
 
     .then(function(data) {
 
@@ -178,7 +174,6 @@
 
 
     // this runs when the submit button is clicked
-
     function submitFeedback() {
 
         var requestId = document.getElementById("completedRequestDropdown").value;
@@ -186,13 +181,10 @@
         var comments  = document.getElementById("commentsBox").value.trim();
 
         // check a request was selected
-
         if (requestId === "") {
             alert("Please select a request.");
             return;
         }
-
-
 
         // check a rating was selected
         if (rating === null) {
@@ -200,10 +192,7 @@
             return;
         }
 
-
-
         // send the feedback to the server
-
         fetch(serverAddress + "/feedback", {
             method: "POST",
             headers: {
@@ -211,9 +200,9 @@
             },
             body: JSON.stringify({
                 request_id: parseInt(requestId),
-                rating: parseInt(rating.value),
-                comments: comments,
-                user_id: parseInt(currentUserId)
+                rating:     parseInt(rating.value),
+                comments:   comments,
+                user_id:    parseInt(currentUserId)
             })
 
         })
@@ -226,10 +215,8 @@
             if (data.success) {
                 alert("Thank you, your feedback has been submitted");
                 window.location.href = "Dashboard.html";
-            }
-
-            else {
-                alert("Could not submit feedback");
+            } else {
+                alert("Could not submit feedback: " + (data.error || "Please try again."));
             }
         })
 

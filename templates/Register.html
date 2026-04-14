@@ -10,19 +10,17 @@
 <div class="auth-card">
     <h1>Create Account</h1>
     <p class="subtitle">Register to access the maintenance system</p>
-    <div id="errMsg"  class="err-msg"></div>
-    <div id="okMsg"   class="ok-msg"></div>
     <div class="form-group">
         <label>First Name</label>
-        <input type="text" id="firstName" placeholder="e.g. James">
+        <input type="text" id="firstName" placeholder="e.g. Nathan">
     </div>
     <div class="form-group">
         <label>Surname</label>
-        <input type="text" id="surname" placeholder="e.g. Smith">
+        <input type="text" id="surname" placeholder="e.g. Isak">
     </div>
     <div class="form-group">
         <label>Email Address</label>
-        <input type="email" id="email" placeholder="you@example.com">
+        <input type="email" id="email" placeholder="nathan@gmail.com">
     </div>
     <div class="form-group">
         <label>Role</label>
@@ -30,6 +28,7 @@
             <option value="Guest">Guest</option>
             <option value="Staff">Staff</option>
             <option value="Subcontractor">Subcontractor</option>
+            <option value="Manager">Manager</option>
         </select>
     </div>
     <div class="form-group">
@@ -50,17 +49,14 @@ function register() {
     var password  = document.getElementById('password').value;
     var btn       = document.getElementById('regBtn');
 
-    document.getElementById('errMsg').style.display = 'none';
-    document.getElementById('okMsg').style.display  = 'none';
-
     if (!firstName || !surname || !email || !password) {
-        showErr('Please fill in all fields.'); return;
+        alert('Please fill in all fields.'); return;
     }
     if (password.length < 6) {
-        showErr('Password must be at least 6 characters.'); return;
+        alert('Password must be at least 6 characters.'); return;
     }
 
-    btn.disabled = true; btn.textContent = 'Creating account...';
+    btn.disabled = true; btn.textContent = 'Creating account';
 
     fetch(API + '/register', {
         method: 'POST',
@@ -80,19 +76,14 @@ function register() {
             localStorage.setItem('email',   email);
             window.location.href = 'Dashboard.html';
         } else {
-            showErr(data.message || 'Registration failed.');
+            alert(data.message || 'Registration failed.');
             btn.disabled = false; btn.textContent = 'Create Account';
         }
     })
     .catch(function() {
-        showErr('Cannot connect to server. Make sure Server.py is running.');
+        alert('Cannot connect to server. Make sure Server.py is running.');
         btn.disabled = false; btn.textContent = 'Create Account';
     });
-}
-
-function showErr(msg) {
-    var el = document.getElementById('errMsg');
-    el.textContent = msg; el.style.display = 'block';
 }
 </script>
 </body>

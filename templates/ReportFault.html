@@ -37,8 +37,6 @@
 
     <div class="fault-log fault-form">
         <h3>New Fault Report</h3><br>
-        <div id="okMsg"  class="ok-msg"></div>
-        <div id="errMsg" class="err-msg"></div>
         <div class="form-group">
             <label>Room Number</label>
             <input type="text" id="room" placeholder="e.g. 101">
@@ -70,7 +68,7 @@
     var role   = localStorage.getItem('role');
 
     // if nobody is logged in send them back to the login page
-    if (!userId)      {
+    if (!userId) {
         window.location.href = 'Login.html';
     }
 
