@@ -16,6 +16,7 @@
 .submit-btn:hover    { background: #1d4ed8; }
 .submit-btn:disabled { opacity: 0.6; cursor: default; }
 </style>
+    <script src="nav.js"></script>
 </head>
 <body>
 
@@ -62,101 +63,84 @@
 </main>
 
 <script>
+var serverAddress = 'http://127.0.0.1:5000';
+var userId        = localStorage.getItem('user_id');
+var role          = localStorage.getItem('role');
 
-    // get the current users details that were saved when they logged in
-    var userId = localStorage.getItem('user_id');
-    var role   = localStorage.getItem('role');
+// redirect if not logged in
+if (!userId) {
+    window.location.href = 'Login.html';
+}
 
-    // if nobody is logged in send them back to the login page
-    if (!userId) {
-        window.location.href = 'Login.html';
+// Subcontractors cannot report faults - redirect to their page
+if (role === 'Subcontractor') {
+    window.location.href = 'ViewJobs.html';
+}
+
+function buildNav() {
+        // nav.js provides the master link list
+        buildNavFromJS('ReportFault.html');
     }
 
-    // build nav links based on role
-    var nav = document.getElementById('navLinks');
+buildNav();
 
-    nav.innerHTML += '<a href="Dashboard.html">Dashboard</a>';
+function logout() {
+    fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
 
-    if (role === 'Guest' || role === 'Staff' || role === 'Manager') {
-        nav.innerHTML += '<a href="ReportFault.html" class="current">Report Fault</a>';
-        nav.innerHTML += '<a href="View Requests.html">View Requests</a>';
+function submitFault() {
+    var room        = document.getElementById('room').value.trim();
+    var title       = document.getElementById('title').value.trim();
+    var description = document.getElementById('description').value.trim();
+    var priority    = document.getElementById('priority').value;
+    var btn         = document.getElementById('submitBtn');
+
+    if (!room) {
+        alert('Please enter a room number.');
+        return;
+    }
+    if (!title) {
+        alert('Please enter an issue title.');
+        return;
+    }
+    if (!description) {
+        alert('Please enter a description.');
+        return;
     }
 
-    if (role === 'Subcontractor') {
-        nav.innerHTML += '<a href="ViewJobs.html">My Jobs</a>';
-    }
+    btn.disabled = true;
+    btn.textContent = 'Submitting...';
 
-    if (role === 'Staff' || role === 'Manager') {
-        nav.innerHTML += '<a href="AssignJob.html">Assign Jobs</a>';
-    }
-
-    if (role === 'Manager') {
-        nav.innerHTML += '<a href="Analytics.html">Analytics</a>';
-    }
-
-    nav.innerHTML += '<a href="Notifications.html">Notifications</a>';
-    nav.innerHTML += '<a href="Feedback.html">Feedback</a>';
-
-    function logout() {
-        fetch('http://127.0.0.1:5000/logout', { method: 'POST', credentials: 'include' });
-        localStorage.clear();
-    }
-
-    // runs when the submit button is clicked
-    function submitFault() {
-
-        // get the values from the form fields
-        var room        = document.getElementById('room').value.trim();
-        var title       = document.getElementById('title').value.trim();
-        var description = document.getElementById('description').value.trim();
-        var priority    = document.getElementById('priority').value;
-
-        // check all fields are filled before sending anything
-        if (room === '') {
-            alert('Please enter a room number.');
-            return;
-        }
-
-        if (title === '') {
-            alert('Please enter an issue title.');
-            return;
-        }
-
-        if (description === '') {
-            alert('Please enter a description.');
-            return;
-        }
-
-        // send the data to the Flask backend
-        fetch('http://127.0.0.1:5000/report-fault', {
-            method: 'POST',
-            credentials: 'include',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                user_id:     userId,
-                room:        room,
-                title:       title,
-                description: description,
-                priority:    priority
-            })
+    fetch(serverAddress + '/report-fault', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            user_id:     userId,
+            room:        room,
+            title:       title,
+            description: description,
+            priority:    priority
         })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (data.success) {
-                alert('Fault reported successfully. Reference number is #' + data.request_id);
-                window.location.href = 'Dashboard.html';
-            } else {
-                alert('Something went wrong. Please try again.');
-            }
-        })
-        .catch(function() {
-            alert('Cannot connect to server. Is Server.py running?');
-        });
-
-    }
-
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            alert('Fault reported successfully. Your reference number is #' + data.request_id);
+            window.location.href = 'Dashboard.html';
+        } else {
+            alert(data.message || 'Something went wrong. Please try again.');
+            btn.disabled = false;
+            btn.textContent = 'Submit Fault Report';
+        }
+    })
+    .catch(function() {
+        alert('Cannot connect to server. Is Server.py running?');
+        btn.disabled = false;
+        btn.textContent = 'Submit Fault Report';
+    });
+}
 </script>
 </body>
 </html>

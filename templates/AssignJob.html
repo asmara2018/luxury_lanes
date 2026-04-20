@@ -15,19 +15,18 @@
 .assign-btn          { width:100%; padding:12px; background:#2563eb; color:white; border:none; border-radius:6px; font-size:14px; font-weight:600; cursor:pointer; margin-top:8px; }
 .assign-btn:hover    { opacity:0.9; }
 .assign-btn:disabled { opacity:0.6; cursor:default; }
-.ok-msg  { display:none; background:#d1fae5; color:#065f46; border-left:4px solid #16a34a; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px; }
-.err-msg { display:none; background:#fee2e2; color:#dc2626; border-left:4px solid #dc2626; padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:16px; }
 .hint    { font-size:12px; color:#6b7280; margin-bottom:12px; }
 tbody tr { cursor:pointer; }
 tbody tr.selected-row { background:#eff6ff; }
 .detail-box { background:#f8fafc; border:1px solid #e5e7eb; border-radius:6px; padding:12px 14px; margin-bottom:16px; font-size:13px; color:#374151; line-height:1.7; }
 </style>
+    <script src="nav.js"></script>
 </head>
 <body>
 
 <aside class="nav-panel">
     <h2>Luxury Lanes</h2>
-    <nav id="nav-links" class="nav-links"></nav>
+    <nav class="nav-links" id="navLinks"></nav>
     <div class="nav-bottom">
         <a href="Login.html" onclick="logout()">Log Out</a>
     </div>
@@ -39,29 +38,23 @@ tbody tr.selected-row { background:#eff6ff; }
             <h1>Assign Job</h1>
             <p>Select a request and assign it to a subcontractor</p>
         </div>
-        <div class="staff-info">
-            <span id="userName"></span>
-            <div class="staff-initial" id="userInitial">?</div>
-        </div>
     </div>
 
     <div class="fault-log" style="margin-bottom:22px;">
-        <h3>Step 1 — Select a Request</h3>
+        <h3>Step 1 - Select a Request</h3>
         <p class="hint">Click a row to select it</p>
         <table>
             <thead>
                 <tr><th>ID</th><th>Room</th><th>Title</th><th>Priority</th><th>Status</th><th>Reported</th></tr>
             </thead>
             <tbody id="requestTable">
-                <tr><td colspan="6" style="padding:12px 0; color:#9ca3af;">Loading...</td></tr>
+                <tr><td colspan="6" style="padding:12px 0;color:#9ca3af;">Loading...</td></tr>
             </tbody>
         </table>
     </div>
 
     <div class="fault-log" style="max-width:560px;">
-        <h3>Step 2 — Assign to Subcontractor</h3><br>
-        <div id="okMsg"  class="ok-msg"></div>
-        <div id="errMsg" class="err-msg"></div>
+        <h3>Step 2 - Assign to Subcontractor</h3><br>
         <div id="requestDetail" class="detail-box" style="display:none;"></div>
         <input type="hidden" id="selectedRequestId">
         <div class="form-group">
@@ -83,55 +76,31 @@ tbody tr.selected-row { background:#eff6ff; }
 </main>
 
 <script>
-var API         = 'http://127.0.0.1:5000';
-var staffData   = [];
-var allRequests = [];
+var serverAddress = 'http://127.0.0.1:5000';
+var staffData     = [];
+var allRequests   = [];
+var uid           = localStorage.getItem('user_id');
+var role          = localStorage.getItem('role');
 
-// Redirect to login if not authenticated
-(function checkAuth() {
-    var uid  = localStorage.getItem('user_id');
-    var role = localStorage.getItem('role');
-    if (!uid || !role) {
-        window.location.href = 'Login.html';
-        return;
+// redirect if not logged in
+if (!uid) {
+    window.location.href = 'Login.html';
+}
+
+// only Staff and Manager can access this page
+if (role !== 'Staff' && role !== 'Manager') {
+    window.location.href = 'Dashboard.html';
+}
+
+function buildNav() {
+        // nav.js provides the master link list
+        buildNavFromJS('AssignJob.html');
     }
-    // Only Staff and Managers may access this page
-    if (role !== 'Staff' && role !== 'Manager') {
-        window.location.href = 'Dashboard.html';
-    }
-})();
 
-// Build navigation
-(function () {
-    var role = localStorage.getItem('role') || '';
-    var name = localStorage.getItem('name') || '';
-
-    document.getElementById('userName').textContent    = name || 'Staff';
-    document.getElementById('userInitial').textContent = (name || 'S')[0].toUpperCase();
-
-    var links = [
-        { href: 'Dashboard.html',     label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'ReportFault.html',   label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
-        { href: 'AssignJob.html',     label: 'Assign Jobs',   roles: ['Staff','Manager'] },
-        { href: 'View Requests.html', label: 'View Requests', roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'Analytics.html',     label: 'Analytics',     roles: ['Manager'] },
-        { href: 'Notifications.html', label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'Feedback.html',      label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
-    ];
-
-    var nav = document.getElementById('nav-links');
-    links.filter(function(l) { return l.roles.indexOf(role) !== -1; }).forEach(function(l) {
-        var a = document.createElement('a');
-        a.href        = l.href;
-        a.textContent = l.label;
-        if (l.href === 'AssignJob.html') a.className = 'current';
-        nav.appendChild(a);
-    });
-})();
+buildNav();
 
 function logout() {
-    var uid = localStorage.getItem('user_id');
-    fetch(API + '/logout?user_id=' + uid, { method: 'POST', credentials: 'include' });
+    fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
     localStorage.clear();
     window.location.href = 'Login.html';
 }
@@ -142,10 +111,9 @@ function priorityClass(p) {
     return 'priority-tag priority-minor';
 }
 
-// Load open requests into the Step 1 table
+// load open requests into Step 1 table
 function loadRequests() {
-    var uid = localStorage.getItem('user_id');
-    fetch(API + '/requests?user_id=' + uid, { credentials: 'include' })
+    fetch(serverAddress + '/requests?user_id=' + uid, { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         allRequests = Array.isArray(data) ? data.filter(function(r) { return r.status !== 'Completed'; }) : [];
@@ -172,10 +140,9 @@ function loadRequests() {
     });
 }
 
-// Load ONLY subcontractors into the dropdown
+// load only subcontractors into the dropdown
 function loadSubcontractors() {
-    var uid = localStorage.getItem('user_id');
-    fetch(API + '/staff?user_id=' + uid, { credentials: 'include' })
+    fetch(serverAddress + '/staff?user_id=' + uid, { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (!Array.isArray(data)) return;
@@ -184,7 +151,7 @@ function loadSubcontractors() {
         staffData = subs;
 
         var sel = document.getElementById('staffSelect');
-        sel.innerHTML = '<option value="">-- Select a subcontractor --</option>';
+        sel.innerHTML = '<option value="">Select a subcontractor:</option>';
 
         if (subs.length === 0) {
             var opt = document.createElement('option');
@@ -202,11 +169,11 @@ function loadSubcontractors() {
         });
     })
     .catch(function() {
-        showErr('Could not load subcontractors. Is Server.py running?');
+        alert('Could not load subcontractors. Is Server.py running?');
     });
 }
 
-// Highlight the clicked row and show its detail panel
+// highlight selected row and show detail panel
 function selectRequest(id) {
     document.getElementById('selectedRequestId').value = id;
 
@@ -228,45 +195,48 @@ function selectRequest(id) {
     }
 }
 
-// Fill in the email when a subcontractor is selected
+// fill in email when subcontractor is selected
 function onStaffChange() {
-    var uid    = document.getElementById('staffSelect').value;
-    var member = staffData.find(function(s) { return String(s.user_id) === String(uid); });
+    var selectedId = document.getElementById('staffSelect').value;
+    var member     = staffData.find(function(s) { return String(s.user_id) === String(selectedId); });
     document.getElementById('staffEmail').value = member ? (member.email || 'No email on record') : '';
 }
 
-// Send the PUT request to assign the job
+// send the assign request to the server
 function assignJob() {
     var requestId  = document.getElementById('selectedRequestId').value;
     var assignedTo = document.getElementById('staffSelect').value;
     var notes      = document.getElementById('notes').value.trim();
     var btn        = document.getElementById('assignBtn');
-    var uid        = localStorage.getItem('user_id');  // ← FIX: include user_id in body
 
-    document.getElementById('okMsg').style.display  = 'none';
-    document.getElementById('errMsg').style.display = 'none';
-
-    if (!requestId)  { showErr('Please select a request first.'); return; }
-    if (!assignedTo) { showErr('Please select a subcontractor.'); return; }
+    if (!requestId) {
+        alert('Please select a request first.');
+        return;
+    }
+    if (!assignedTo) {
+        alert('Please select a subcontractor.');
+        return;
+    }
 
     btn.disabled    = true;
     btn.textContent = 'Assigning...';
 
-    fetch(API + '/requests/' + requestId + '/assign', {
+    fetch(serverAddress + '/requests/' + requestId + '/assign', {
         method:      'PUT',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json' },
         body:        JSON.stringify({
             assigned_to: parseInt(assignedTo),
             notes:       notes,
-            user_id:     parseInt(uid)   // ← FIX: send user_id so server can verify auth
+            user_id:     parseInt(uid)
         })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.success) {
             var member = staffData.find(function(s) { return String(s.user_id) === String(assignedTo); });
-            showOk('Job assigned to ' + (member ? member.first_name + ' ' + member.surname : 'subcontractor') + ' successfully.');
+            alert('Job assigned to ' + (member ? member.first_name + ' ' + member.surname : 'subcontractor') + ' successfully.');
+            // reset form
             document.getElementById('selectedRequestId').value     = '';
             document.getElementById('staffSelect').value           = '';
             document.getElementById('staffEmail').value            = '';
@@ -275,20 +245,17 @@ function assignJob() {
             document.querySelectorAll('#requestTable tr').forEach(function(row) { row.classList.remove('selected-row'); });
             loadRequests();
         } else {
-            showErr(data.error || 'Could not assign job. Please try again.');
+            alert(data.error || 'Could not assign job. Please try again.');
         }
         btn.disabled    = false;
         btn.textContent = 'Assign Job';
     })
     .catch(function() {
-        showErr('Cannot connect to server. Is Server.py running?');
+        alert('Cannot connect to server. Is Server.py running?');
         btn.disabled    = false;
         btn.textContent = 'Assign Job';
     });
 }
-
-function showOk(msg)  { var e = document.getElementById('okMsg');  e.textContent = msg; e.style.display = 'block'; document.getElementById('errMsg').style.display = 'none'; }
-function showErr(msg) { var e = document.getElementById('errMsg'); e.textContent = msg; e.style.display = 'block'; document.getElementById('okMsg').style.display  = 'none'; }
 
 loadRequests();
 loadSubcontractors();

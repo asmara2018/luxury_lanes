@@ -15,11 +15,8 @@
 .notif-time    { font-size: 11px; color: #9ca3af; margin-top: 4px; }
 .mark-btn { padding: 7px 14px; background: #f3f4f6; border: 1px solid #e5e7eb; border-radius: 6px; font-size: 12px; cursor: pointer; font-family: 'Segoe UI', Arial, sans-serif; }
 .mark-btn:hover { background: #e5e7eb; }
-.type-Confirmation { color: #16a34a; }
-.type-Assignment   { color: #2563eb; }
-.type-Completed    { color: #065f46; }
-.type-New          { color: #dc2626; }
 </style>
+    <script src="nav.js"></script>
 </head>
 <body>
 <aside class="nav-panel">
@@ -33,10 +30,6 @@
             <h1>Notifications</h1>
             <p id="unreadLabel">Loading...</p>
         </div>
-        <div class="staff-info">
-            <div class="staff-initial" id="userInitial">?</div>
-            <span id="userName">User</span>
-        </div>
     </div>
     <div class="fault-log">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
@@ -49,109 +42,78 @@
     </div>
 </main>
 <script>
+var serverAddress = 'http://127.0.0.1:5000';
+var uid           = localStorage.getItem('user_id');
+var role          = localStorage.getItem('role');
 
-    var API  = 'http://127.0.0.1:5000';
-    var uid  = localStorage.getItem('user_id');
-    var role = localStorage.getItem('role');
+// redirect if not logged in
+if (!uid) {
+    window.location.href = 'Login.html';
+}
 
-    // build nav links based on role
-    var nav = document.getElementById('navLinks');
-
-    nav.innerHTML += '<a href="Dashboard.html">Dashboard</a>';
-
-    if (role === 'Guest' || role === 'Staff' || role === 'Manager') {
-        nav.innerHTML += '<a href="ReportFault.html">Report Fault</a>';
-        nav.innerHTML += '<a href="View Requests.html">View Requests</a>';
+function buildNav() {
+        // nav.js provides the master link list
+        buildNavFromJS('Notifications.html');
     }
 
-    if (role === 'Subcontractor') {
-        nav.innerHTML += '<a href="ViewJobs.html">My Jobs</a>';
-    }
+buildNav();
 
-    if (role === 'Staff' || role === 'Manager') {
-        nav.innerHTML += '<a href="AssignJob.html">Assign Jobs</a>';
-    }
+function logout() {
+    fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
 
-    if (role === 'Manager') {
-        nav.innerHTML += '<a href="Analytics.html">Analytics</a>';
-    }
+function loadNotifications() {
+    fetch(serverAddress + '/notifications?user_id=' + uid, { credentials: 'include' })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        var list   = data.notifications || [];
+        var unread = data.unread_count  || 0;
 
-    nav.innerHTML += '<a href="Notifications.html" class="current">Notifications</a>';
-    nav.innerHTML += '<a href="Feedback.html">Feedback</a>';
+        if (unread > 0) {
+            document.getElementById('unreadLabel').textContent = unread + ' unread notification(s)';
+        } else {
+            document.getElementById('unreadLabel').textContent = 'All caught up - no unread notifications';
+        }
 
-    function logout() {
-        fetch(API + '/logout', { method: 'POST', credentials: 'include' });
-        localStorage.clear();
-    }
+        var container = document.getElementById('notifList');
 
-    // fetch notifications from flask and display them
-    function loadNotifications() {
+        if (list.length === 0) {
+            container.innerHTML = '<p style="padding:20px 0;color:#9ca3af;font-size:13px;text-align:center;">No notifications yet.</p>';
+            return;
+        }
 
-        fetch(API + '/notifications?user_id=' + uid, { credentials: 'include' })
+        var html = '';
+        for (var i = 0; i < list.length; i++) {
+            var n         = list[i];
+            var time      = n.created_at ? n.created_at.replace('T', ' ') : '-';
+            var readClass = n.is_read ? 'read' : 'unread';
 
-        .then(function(response) {
-            return response.json();
-        })
+            html += '<div class="notif-item ' + readClass + '">';
+            html += '<div class="notif-type">'    + (n.type || 'Update') + '</div>';
+            html += '<div class="notif-message">' + n.message             + '</div>';
+            html += '<div class="notif-time">'    + time                  + '</div>';
+            html += '</div>';
+        }
 
-        .then(function(data) {
+        container.innerHTML = html;
+    })
+    .catch(function() {
+        document.getElementById('notifList').innerHTML = '<p style="color:#dc2626;padding:12px 0;">Cannot connect to server.</p>';
+    });
+}
 
-            var list   = data.notifications || [];
-            var unread = data.unread_count  || 0;
+function markAllRead() {
+    fetch(serverAddress + '/notifications/read?user_id=' + uid, { method: 'PUT', credentials: 'include' })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            loadNotifications();
+        }
+    });
+}
 
-            // update the unread count label at the top
-            if (unread > 0) {
-                document.getElementById('unreadLabel').textContent = unread + ' unread notification(s)';
-            } else {
-                document.getElementById('unreadLabel').textContent = 'All caught up - no unread notifications';
-            }
-
-            var container = document.getElementById('notifList');
-
-            // show a message if there are no notifications
-            if (list.length === 0) {
-                container.innerHTML = '<p>No notifications yet.</p>';
-                return;
-            }
-
-            // build the notification items
-            var html = '';
-
-            for (var i = 0; i < list.length; i++) {
-                var n    = list[i];
-                var time = n.created_at ? n.created_at.replace('T', ' ') : '-';
-                var readClass = n.is_read ? 'read' : 'unread';
-
-                html += '<div class="notif-item ' + readClass + '">';
-                html += '<div class="notif-type">'    + n.type    + '</div>';
-                html += '<div class="notif-message">' + n.message + '</div>';
-                html += '<div class="notif-time">'    + time      + '</div>';
-                html += '</div>';
-            }
-
-            container.innerHTML = html;
-        })
-
-        .catch(function() {
-            document.getElementById('notifList').innerHTML = '<p>Cannot connect to server.</p>';
-        });
-    }
-
-    // mark all notifications as read then reload the list
-    function markAllRead() {
-        fetch(API + '/notifications/read?user_id=' + uid, { method: 'PUT', credentials: 'include' })
-        .then(function(response) {
-            return response.json();
-        })
-        .then(function(data) {
-            if (data.success) {
-                loadNotifications();
-            }
-        });
-    }
-
-    loadNotifications();
-
-
+loadNotifications();
 </script>
 </body>
 </html>

@@ -15,7 +15,7 @@
     margin-top: 4px;
 }
 
-/* hides the actual radio buttons, we only want the stars visible */
+/* hides the actual radio buttons, only the stars visible */
 .star-group input[type="radio"] {
     display: none;
 }
@@ -33,7 +33,11 @@
 .star-group label:hover ~ label {
     color: #f59e0b;
 }
+
+.feedback-stars { color: #f59e0b; font-size: 14px; }
+.no-feedback-msg { padding: 20px 0; color: #9ca3af; font-size: 13px; text-align: center; }
 </style>
+    <script src="nav.js"></script>
 </head>
 <body>
 
@@ -54,178 +58,204 @@
         </div>
     </div>
 
-    <div class="fault-log">
+    <!-- Submit form - visible to Guests only -->
+    <div id="submitSection">
+        <div class="fault-log">
+            <h3>Submit Feedback</h3><br>
 
-        <div class="form-group">
-            <label>Select your maintenance request:</label>
-            <select id="completedRequestDropdown">
-                <option value="">Select a request using the drop down below</option>
-            </select>
-        </div>
-
-        <!-- star rating system -->
-        <div class="form-group">
-            <label>Rating:</label>
-
-            <div class="star-group">
-
-                <input type="radio" name="rating" id="star5" value="5">
-                <input type="radio" name="rating" id="star4" value="4">
-                <input type="radio" name="rating" id="star3" value="3">
-                <input type="radio" name="rating" id="star2" value="2">
-                <input type="radio" name="rating" id="star1" value="1">
-
-                <label for="star5">★</label>
-                <label for="star4">★</label>
-                <label for="star3">★</label>
-                <label for="star2">★</label>
-                <label for="star1">★</label>
-
+            <div class="form-group">
+                <label>Select your maintenance request:</label>
+                <select id="completedRequestDropdown">
+                    <option value="">-- Select a completed request --</option>
+                </select>
             </div>
+
+            <div class="form-group">
+                <label>Rating:</label>
+                <div class="star-group">
+                    <input type="radio" name="rating" id="star5" value="5">
+                    <input type="radio" name="rating" id="star4" value="4">
+                    <input type="radio" name="rating" id="star3" value="3">
+                    <input type="radio" name="rating" id="star2" value="2">
+                    <input type="radio" name="rating" id="star1" value="1">
+                    <label for="star5">&#9733;</label>
+                    <label for="star4">&#9733;</label>
+                    <label for="star3">&#9733;</label>
+                    <label for="star2">&#9733;</label>
+                    <label for="star1">&#9733;</label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Comments:</label>
+                <textarea id="commentsBox" placeholder="Describe your experience"></textarea>
+            </div>
+
+            <button class="btn-primary" id="submitBtn" onclick="submitFeedback()">Submit Feedback</button>
         </div>
+    </div>
 
-        <div class="form-group">
-            <label>Description:</label>
-            <textarea id="commentsBox" placeholder="Describe your experience"></textarea>
+    <!-- Feedback history table - visible to all roles -->
+    <div class="fault-log">
+        <h3 id="historyTitle">Feedback History</h3>
+        <div id="feedbackList">
+            <div class="no-feedback-msg">Loading...</div>
         </div>
-
-        <button class="btn-primary" onclick="submitFeedback()">Submit Feedback</button>
-
     </div>
 
 </main>
 
 <script>
+var serverAddress = 'http://127.0.0.1:5000';
+var currentUserId = localStorage.getItem('user_id');
+var currentRole   = localStorage.getItem('role');
 
-    // server address and logged in user info
-    var serverAddress = "http://127.0.0.1:5000";
-    var currentUserId = localStorage.getItem("user_id");
-    var currentRole   = localStorage.getItem("role");
+// redirect if not logged in
+if (!currentUserId) {
+    window.location.href = 'Login.html';
+}
 
-    // build navigation menu depending on the users role
-    var nav = document.getElementById("navLinks");
-
-    nav.innerHTML += "<a href='Dashboard.html'>Dashboard</a>";
-
-    if (currentRole == "Guest" || currentRole == "Staff" || currentRole == "Manager") {
-
-        nav.innerHTML += "<a href='ReportFault.html'>Report Fault</a>";
-        nav.innerHTML += "<a href='View Requests.html'>View Requests</a>";
-
+function buildNav() {
+        // nav.js provides the master link list
+        buildNavFromJS('Feedback.html');
     }
 
-    if (currentRole == "Subcontractor") {
+buildNav();
 
-        nav.innerHTML += "<a href='ViewJobs.html'>My Jobs</a>";
+function logout() {
+    fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.clear();
+}
 
-    }
+// only Guests can submit feedback - hide form for all other roles
+if (currentRole !== 'Guest') {
+    document.getElementById('submitSection').style.display = 'none';
+    document.getElementById('historyTitle').textContent = 'All Guest Feedback';
+}
 
-    if (currentRole == "Staff" || currentRole == "Manager") {
-
-        nav.innerHTML += "<a href='AssignJob.html'>Assign Jobs</a>";
-
-    }
-
-    if (currentRole == "Manager") {
-
-        nav.innerHTML += "<a href='Analytics.html'>Analytics</a>";
-
-    }
-
-    nav.innerHTML += "<a href='Notifications.html'>Notifications</a>";
-    nav.innerHTML += "<a href='Feedback.html' class='current'>Feedback</a>";
-
-    function logout() {
-        fetch(serverAddress + "/logout", { method: "POST", credentials: "include" });
-        localStorage.clear();
-    }
-
-    // load completed requests for the dropdown
-    fetch(serverAddress + "/requests?user_id=" + currentUserId, { credentials: "include" })
-
-    .then(function(response) {
-
-        return response.json();
-
-    })
-
+// load completed requests for the Guest dropdown
+if (currentRole === 'Guest') {
+    fetch(serverAddress + '/requests?user_id=' + currentUserId, { credentials: 'include' })
+    .then(function(response) { return response.json(); })
     .then(function(data) {
+        if (!Array.isArray(data)) return;
+        var dropdown = document.getElementById('completedRequestDropdown');
+        var completed = data.filter(function(r) { return r.status === 'Completed'; });
+
+        if (completed.length === 0) {
+            var opt = document.createElement('option');
+            opt.disabled    = true;
+            opt.textContent = 'No completed requests yet';
+            dropdown.appendChild(opt);
+            return;
+        }
+
+        for (var i = 0; i < completed.length; i++) {
+            var option = document.createElement('option');
+            option.value       = completed[i].id;
+            option.textContent = '#' + completed[i].id + ' - Room ' + completed[i].room + ' - ' + completed[i].title;
+            dropdown.appendChild(option);
+        }
+    });
+}
+
+// load feedback history
+function loadFeedbackHistory() {
+    fetch(serverAddress + '/feedback?user_id=' + currentUserId, { credentials: 'include' })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        var container = document.getElementById('feedbackList');
+
+        if (!Array.isArray(data) || data.length === 0) {
+            container.innerHTML = '<div class="no-feedback-msg">No feedback submitted yet.</div>';
+            return;
+        }
+
+        // build table with guest name column for staff/managers
+        var showGuest = currentRole !== 'Guest';
+        var html = '<table><thead><tr>' +
+            '<th>Request</th><th>Room</th><th>Rating</th><th>Comments</th><th>Date</th>';
+        if (showGuest) html += '<th>Guest</th>';
+        html += '</tr></thead><tbody>';
 
         for (var i = 0; i < data.length; i++) {
-
-            if (data[i].status === "Completed") {
-
-                var option = document.createElement("option");
-
-                option.value = data[i].id;
-
-                option.textContent =
-                    "#" + data[i].id +
-                    " Room- " + data[i].room +
-                    " - " + data[i].title;
-
-                document.getElementById("completedRequestDropdown").appendChild(option);
-
+            var f     = data[i];
+            var stars = '';
+            for (var s = 1; s <= 5; s++) {
+                stars += s <= f.rating ? '&#9733;' : '&#9734;';
             }
+            var date = f.created_at ? f.created_at.split(' ')[0] : '-';
 
+            html += '<tr>';
+            html += '<td>' + (f.title || '-') + '</td>';
+            html += '<td>' + (f.room_number || '-') + '</td>';
+            html += '<td><span class="feedback-stars">' + stars + '</span></td>';
+            html += '<td style="color:#6b7280;font-size:12px;">' + (f.comments || '-') + '</td>';
+            html += '<td>' + date + '</td>';
+            if (showGuest) html += '<td>' + (f.guest_name || '-') + '</td>';
+            html += '</tr>';
         }
 
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    })
+    .catch(function() {
+        document.getElementById('feedbackList').innerHTML = '<div class="no-feedback-msg">Cannot connect to server.</div>';
     });
+}
 
+loadFeedbackHistory();
 
-    // this runs when the submit button is clicked
-    function submitFeedback() {
+function submitFeedback() {
+    var requestId = document.getElementById('completedRequestDropdown').value;
+    var rating    = document.querySelector('input[name="rating"]:checked');
+    var comments  = document.getElementById('commentsBox').value.trim();
+    var btn       = document.getElementById('submitBtn');
 
-        var requestId = document.getElementById("completedRequestDropdown").value;
-        var rating    = document.querySelector("input[name='rating']:checked");
-        var comments  = document.getElementById("commentsBox").value.trim();
-
-        // check a request was selected
-        if (requestId === "") {
-            alert("Please select a request.");
-            return;
-        }
-
-        // check a rating was selected
-        if (rating === null) {
-            alert("Please select a star rating.");
-            return;
-        }
-
-        // send the feedback to the server
-        fetch(serverAddress + "/feedback", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-                request_id: parseInt(requestId),
-                rating:     parseInt(rating.value),
-                comments:   comments,
-                user_id:    parseInt(currentUserId)
-            })
-
-        })
-
-        .then(function(response) {
-            return response.json();
-        })
-
-        .then(function(data) {
-            if (data.success) {
-                alert("Thank you, your feedback has been submitted");
-                window.location.href = "Dashboard.html";
-            } else {
-                alert("Could not submit feedback: " + (data.error || "Please try again."));
-            }
-        })
-
-        .catch(function() {
-            alert("Cannot connect to server. Is Server.py running?");
-        });
-
+    if (!requestId) {
+        alert('Please select a request.');
+        return;
+    }
+    if (rating === null) {
+        alert('Please select a star rating.');
+        return;
     }
 
+    btn.disabled    = true;
+    btn.textContent = 'Submitting...';
+
+    fetch(serverAddress + '/feedback', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            request_id: parseInt(requestId),
+            rating:     parseInt(rating.value),
+            comments:   comments,
+            user_id:    parseInt(currentUserId)
+        })
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        if (data.success) {
+            alert('Thank you, your feedback has been submitted.');
+            // reset form
+            document.getElementById('completedRequestDropdown').value = '';
+            document.querySelectorAll('input[name="rating"]').forEach(function(r) { r.checked = false; });
+            document.getElementById('commentsBox').value = '';
+            loadFeedbackHistory();
+        } else {
+            alert('Could not submit feedback: ' + (data.error || 'Please try again.'));
+        }
+        btn.disabled    = false;
+        btn.textContent = 'Submit Feedback';
+    })
+    .catch(function() {
+        alert('Cannot connect to server. Is Server.py running?');
+        btn.disabled    = false;
+        btn.textContent = 'Submit Feedback';
+    });
+}
 </script>
 
 </body>

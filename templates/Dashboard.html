@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - Luxury Lanes</title>
     <link rel="stylesheet" href="CSS Luxury Lanes.css">
+    <script src="nav.js"></script>
 </head>
 <body>
 
@@ -21,11 +22,10 @@
     <div class="page-header">
         <div>
             <h1>Dashboard</h1>
-            <p>Maintenance Management System</p>
+            <p>Welcome back, <span id="welcomeName"></span></p>
         </div>
     </div>
 
-    <!-- four summary tiles -->
     <section class="request-summary">
         <div class="summary-tile">
             <p>Total Requests</p>
@@ -45,7 +45,6 @@
         </div>
     </section>
 
-    <!-- requests table -->
     <div class="fault-log">
         <h3>Recent Maintenance Requests</h3>
         <table>
@@ -68,41 +67,23 @@
 </main>
 
 <script>
-
 var serverAddress = 'http://127.0.0.1:5000';
 var currentUserId = localStorage.getItem('user_id');
 var currentRole   = localStorage.getItem('role');
+var currentName   = localStorage.getItem('name') || '';
 
-// if nobody is logged in send them back to login
-if (currentUserId === null) {
+// redirect to login if not authenticated
+if (!currentUserId) {
     window.location.href = 'Login.html';
 }
 
-// build the sidebar links based on the users role
+document.getElementById('welcomeName').textContent = currentName;
+
+// build the sidebar links based on the user's role
 function buildNav() {
-    var allLinks = [
-        { page: 'Dashboard.html',     label: 'Dashboard',     allowedRoles: ['Guest','Staff','Subcontractor','Manager'] },
-        { page: 'ReportFault.html',   label: 'Report Fault',  allowedRoles: ['Guest','Staff','Manager'] },
-        { page: 'AssignJob.html',     label: 'Assign Jobs',   allowedRoles: ['Staff','Manager'] },
-        { page: 'ViewJobs.html',      label: 'My Jobs',       allowedRoles: ['Subcontractor'] },
-        { page: 'View Requests.html', label: 'View Requests', allowedRoles: ['Guest','Staff','Manager'] },
-        { page: 'Analytics.html',     label: 'Analytics',     allowedRoles: ['Manager'] },
-        { page: 'Notifications.html', label: 'Notifications', allowedRoles: ['Guest','Staff','Subcontractor','Manager'] },
-        { page: 'Feedback.html',      label: 'Feedback',      allowedRoles: ['Guest','Staff','Subcontractor','Manager'] },
-    ];
-
-    var nav = document.getElementById('navLinks');
-
-    for (var i = 0; i < allLinks.length; i++) {
-        var link = allLinks[i];
-        if (link.allowedRoles.indexOf(currentRole) === -1) continue;
-        var a = document.createElement('a');
-        a.href = link.page;
-        a.textContent = link.label;
-        if (link.page === 'Dashboard.html') a.className = 'current';
-        nav.appendChild(a);
+        // nav.js provides the master link list
+        buildNavFromJS('Dashboard.html');
     }
-}
 
 buildNav();
 
@@ -111,40 +92,39 @@ function logout() {
     localStorage.clear();
 }
 
-// fetch all requests from flask and update the tiles and table
 function loadDashboard() {
-
     fetch(serverAddress + '/requests?user_id=' + currentUserId, { credentials: 'include' })
-
-    .then(function(response) {
-        return response.json();
-    })
-
+    .then(function(response) { return response.json(); })
     .then(function(requests) {
 
-        // count up the totals
+        if (!Array.isArray(requests)) {
+            document.getElementById('requestTable').innerHTML =
+                '<tr><td colspan="6">Could not load requests. Please log in again.</td></tr>';
+            return;
+        }
+
         var totalCount      = requests.length;
         var highCount       = 0;
         var inProgressCount = 0;
         var completedCount  = 0;
 
         for (var i = 0; i < requests.length; i++) {
-            if (requests[i].priority === 'High')       highCount++;
-            if (requests[i].status === 'In Progress')  inProgressCount++;
-            if (requests[i].status === 'Completed')    completedCount++;
+            if (requests[i].priority === 'High')      highCount++;
+            if (requests[i].status === 'In Progress') inProgressCount++;
+            if (requests[i].status === 'Completed')   completedCount++;
         }
 
-        // put the counts into the four tiles
         document.getElementById('totalCount').textContent      = totalCount;
         document.getElementById('highCount').textContent       = highCount;
         document.getElementById('inProgressCount').textContent = inProgressCount;
         document.getElementById('completedCount').textContent  = completedCount;
 
-        // build the table rows for the reported maintenance requests
         var rows = '';
+        // show most recent 20
+        var display = requests.slice(0, 20);
 
-        for (var i = 0; i < requests.length; i++) {
-            var r    = requests[i];
+        for (var i = 0; i < display.length; i++) {
+            var r    = display[i];
             var date = r.report_time ? r.report_time.split(' ')[0] : '-';
             rows += '<tr>';
             rows += '<td>#' + r.id + '</td>';
@@ -156,19 +136,19 @@ function loadDashboard() {
             rows += '</tr>';
         }
 
+        if (rows === '') {
+            rows = '<tr><td colspan="6">No requests yet.</td></tr>';
+        }
+
         document.getElementById('requestTable').innerHTML = rows;
-
     })
-
     .catch(function() {
         document.getElementById('requestTable').innerHTML =
             '<tr><td colspan="6">Cannot connect to server. Is Server.py running?</td></tr>';
     });
-
 }
 
 loadDashboard();
-
 </script>
 
 </body>

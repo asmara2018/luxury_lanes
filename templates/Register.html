@@ -6,22 +6,27 @@
 <title>Register - Luxury Lanes</title>
 <link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
+
 <body class="auth-body">
 <div class="auth-card">
     <h1>Create Account</h1>
     <p class="subtitle">Register to access the maintenance system</p>
+
     <div class="form-group">
         <label>First Name</label>
         <input type="text" id="firstName" placeholder="e.g. Nathan">
     </div>
+
     <div class="form-group">
         <label>Surname</label>
         <input type="text" id="surname" placeholder="e.g. Isak">
     </div>
+
     <div class="form-group">
         <label>Email Address</label>
         <input type="email" id="email" placeholder="nathan@gmail.com">
     </div>
+
     <div class="form-group">
         <label>Role</label>
         <select id="role">
@@ -31,13 +36,20 @@
             <option value="Manager">Manager</option>
         </select>
     </div>
+
     <div class="form-group">
         <label>Password</label>
-        <input type="password" id="password" placeholder="Minimum 6 characters" onkeydown="if(event.key==='Enter')register()">
+        <input type="password" id="password" placeholder="Minimum 6 characters"
+        onkeydown="if(event.key==='Enter')register()">
     </div>
+
     <button class="btn-primary" id="regBtn" onclick="register()">Create Account</button>
-    <p class="auth-link">Already have an account? <a href="Login.html">Sign in</a></p>
+
+    <p class="auth-link">
+        Already have an account? <a href="Login.html">Sign in</a>
+    </p>
 </div>
+
 <script>
 var API = 'http://127.0.0.1:5000';
 
@@ -49,42 +61,66 @@ function register() {
     var password  = document.getElementById('password').value;
     var btn       = document.getElementById('regBtn');
 
+    // Empty check
     if (!firstName || !surname || !email || !password) {
-        alert('Please fill in all fields.'); return;
-    }
-    if (password.length < 6) {
-        alert('Password must be at least 6 characters.'); return;
+        alert('Please fill in all fields.');
+        return;
     }
 
-    btn.disabled = true; btn.textContent = 'Creating account';
+    // Name length check
+    if (firstName.length < 2 || surname.length < 2) {
+        alert('Names must be at least 2 characters.');
+        return;
+    }
+
+    // Email must contain @
+    if (!email.includes('@')) {
+        alert('Email must include @ symbol.');
+        return;
+    }
+
+    // Password length check
+    if (password.length < 6) {
+        alert('Password must be at least 6 characters.');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Creating account...';
 
     fetch(API + '/register', {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            first_name: firstName, surname: surname,
-            email: email, role: role, password: password
+            first_name: firstName,
+            surname: surname,
+            email: email,
+            role: role,
+            password: password
         })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.success) {
             localStorage.setItem('user_id', data.user_id);
-            localStorage.setItem('role',    data.role);
-            localStorage.setItem('name',    data.name);
-            localStorage.setItem('email',   email);
+            localStorage.setItem('role', data.role);
+            localStorage.setItem('name', data.name);
+            localStorage.setItem('email', email);
             window.location.href = 'Dashboard.html';
         } else {
             alert(data.message || 'Registration failed.');
-            btn.disabled = false; btn.textContent = 'Create Account';
+            btn.disabled = false;
+            btn.textContent = 'Create Account';
         }
     })
     .catch(function() {
         alert('Cannot connect to server. Make sure Server.py is running.');
-        btn.disabled = false; btn.textContent = 'Create Account';
+        btn.disabled = false;
+        btn.textContent = 'Create Account';
     });
 }
 </script>
+
 </body>
 </html>

@@ -36,8 +36,6 @@
 .mark-complete-button    { padding:9px 16px; background:#2563eb; color:#fff; border:none; border-radius:6px; font-size:13px; font-weight:600; cursor:pointer; font-family:'Segoe UI',Arial,sans-serif; }
 .mark-complete-button:hover    { background:#1d4ed8; }
 .mark-complete-button:disabled { opacity:0.5; cursor:default; }
-.completion-note-saved  { font-size:12px; color:#6b7280; font-style:italic; margin-top:6px; }
-.completion-note-saved strong { color:#374151; font-style:normal; }
 .status-badge       { display:inline-block; padding:3px 10px; border-radius:12px; font-size:11px; font-weight:600; }
 .status-reported    { background:#e0e7ff; color:#3730a3; }
 .status-in-progress { background:#fef3c7; color:#92400e; }
@@ -47,7 +45,10 @@
 .job-count-display  { font-size:12px; color:#6b7280; margin-bottom:12px; }
 .empty-jobs-message { text-align:center; padding:40px 0; color:#9ca3af; font-size:14px; }
 .empty-jobs-icon    { font-size:36px; margin-bottom:8px; }
+.completion-note-saved  { font-size:12px; color:#6b7280; font-style:italic; margin-top:6px; }
+.completion-note-saved strong { color:#374151; font-style:normal; }
 </style>
+    <script src="nav.js"></script>
 </head>
 <body>
 
@@ -75,12 +76,10 @@
                 <option value="Completed">Completed Only</option>
             </select>
         </div>
-        <div id="jobsSuccessMessage" class="ok-msg"></div>
-        <div id="jobsErrorMessage"   class="err-msg"></div>
         <div id="jobCountDisplay" class="job-count-display"></div>
         <div id="jobCardsList">
             <div class="empty-jobs-message">
-                <div class="empty-jobs-icon">⏳</div>
+                <div class="empty-jobs-icon">&#9203;</div>
                 Loading your jobs...
             </div>
         </div>
@@ -88,85 +87,51 @@
 </main>
 
 <script>
-var API         = 'http://127.0.0.1:5000';
-var uid         = localStorage.getItem('user_id');
-var role        = localStorage.getItem('role') || '';
-var allJobsList = [];
+var serverAddress = 'http://127.0.0.1:5000';
+var uid           = localStorage.getItem('user_id');
+var role          = localStorage.getItem('role') || '';
+var allJobsList   = [];
 
-// ── Navigation ─────────────────────────────────────────────
-(function buildNav() {
-    var standardLinks = [
-        { href: 'Dashboard.html',     label: 'Dashboard',     roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'ReportFault.html',   label: 'Report Fault',  roles: ['Guest','Staff','Manager'] },
-        { href: 'ViewRequests.html',  label: 'View Requests', roles: ['Guest','Staff','Manager'] },
-        { href: 'ViewJobs.html',      label: 'My Jobs',       roles: ['Subcontractor'] },
-        { href: 'Notifications.html', label: 'Notifications', roles: ['Guest','Staff','Subcontractor','Manager'] },
-        { href: 'Feedback.html',      label: 'Feedback',      roles: ['Guest','Staff','Subcontractor','Manager'] },
-    ];
-    var managerLinks = [
-        { href: 'AssignJob.html',      label: 'Assign Jobs' },
-        { href: 'ManageRooms.html',    label: 'Manage Rooms' },
-        { href: 'ManageRequests.html', label: 'Manage Requests' },
-        { href: 'Analytics.html',      label: 'Analytics' },
-    ];
+// redirect if not logged in
+if (!uid) {
+    window.location.href = 'Login.html';
+}
 
-    var nav         = document.getElementById('navLinks');
-    var currentPage = window.location.pathname.split('/').pop();
+// only Subcontractors can access this page
+if (role !== 'Subcontractor') {
+    window.location.href = 'Dashboard.html';
+}
 
-    standardLinks
-        .filter(function(l) { return l.roles.indexOf(role) !== -1; })
-        .forEach(function(l) {
-            var a = document.createElement('a');
-            a.href = l.href; a.textContent = l.label;
-            if (l.href === currentPage) a.className = 'current';
-            nav.appendChild(a);
-        });
-
-    if (role === 'Manager') {
-        var isManagerPage = managerLinks.some(function(l) { return l.href === currentPage; });
-        var wrapper = document.createElement('div');
-        wrapper.className = 'nav-dropdown' + (isManagerPage ? ' open' : '');
-        var toggle = document.createElement('div');
-        toggle.className = 'nav-dropdown-toggle' + (isManagerPage ? ' current' : '');
-        toggle.innerHTML = 'Management <span class="nav-dropdown-arrow">&#9660;</span>';
-        toggle.addEventListener('click', function() { wrapper.classList.toggle('open'); });
-        var menu = document.createElement('div');
-        menu.className = 'nav-dropdown-menu';
-        managerLinks.forEach(function(l) {
-            var a = document.createElement('a');
-            a.href = l.href; a.textContent = l.label;
-            if (l.href === currentPage) a.className = 'current';
-            menu.appendChild(a);
-        });
-        wrapper.appendChild(toggle);
-        wrapper.appendChild(menu);
-        nav.appendChild(wrapper);
+function buildNav() {
+        // nav.js provides the master link list
+        buildNavFromJS('ViewJobs.html');
     }
-})();
+
+buildNav();
 
 function logout() {
-    fetch(API + '/logout?user_id=' + uid, { method: 'POST', credentials: 'include' });
+    fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
     localStorage.clear();
     window.location.href = 'Login.html';
 }
 
-// ── Jobs ───────────────────────────────────────────────────
 function getStatusBadgeClass(s) {
     if (s === 'Reported')    return 'status-badge status-reported';
     if (s === 'In Progress') return 'status-badge status-in-progress';
     return 'status-badge status-completed';
 }
 
+// escape HTML to prevent XSS
 function esc(s) {
-    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function loadAssignedJobs() {
-    fetch(API + '/requests?user_id=' + uid, { credentials: 'include' })
+    fetch(serverAddress + '/requests?user_id=' + uid, { credentials: 'include' })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (!Array.isArray(data)) {
-            showJobsError('Could not load jobs. Make sure Server.py is running.');
+            alert('Could not load jobs. Make sure Server.py is running.');
             return;
         }
         allJobsList = data;
@@ -174,15 +139,20 @@ function loadAssignedJobs() {
     })
     .catch(function() {
         document.getElementById('jobCardsList').innerHTML =
-            '<div class="empty-jobs-message"><div class="empty-jobs-icon">⚠️</div>Cannot connect to server.</div>';
+            '<div class="empty-jobs-message"><div class="empty-jobs-icon">&#9888;</div>Cannot connect to server.</div>';
     });
 }
 
 function applyJobFilter() {
     var f = document.getElementById('jobStatusFilter').value;
-    var list = f === 'active'    ? allJobsList.filter(function(j){ return j.status !== 'Completed'; })
-             : f === 'Completed' ? allJobsList.filter(function(j){ return j.status === 'Completed'; })
-             : allJobsList;
+    var list;
+    if (f === 'active') {
+        list = allJobsList.filter(function(j) { return j.status !== 'Completed'; });
+    } else if (f === 'Completed') {
+        list = allJobsList.filter(function(j) { return j.status === 'Completed'; });
+    } else {
+        list = allJobsList;
+    }
     renderJobCards(list);
 }
 
@@ -191,41 +161,48 @@ function renderJobCards(jobList) {
 
     if (jobList.length === 0) {
         document.getElementById('jobCardsList').innerHTML =
-            '<div class="empty-jobs-message"><div class="empty-jobs-icon">✅</div>No jobs here. A manager will assign work to you.</div>';
+            '<div class="empty-jobs-message"><div class="empty-jobs-icon">&#9989;</div>No jobs here. A manager will assign work to you.</div>';
         return;
     }
 
     document.getElementById('jobCardsList').innerHTML = jobList.map(function(job) {
-        var reportDate   = job.report_time ? job.report_time.split(' ')[0] : '-';
-        var reporterName = job.reporter_name || 'Guest';
-        var isCompleted  = job.status === 'Completed';
+        var reportDate       = job.report_time ? job.report_time.split(' ')[0] : '-';
+        var reporterName     = job.reporter_name || 'Guest';
+        var isCompleted      = job.status === 'Completed';
         var priorityCardClass = isCompleted ? 'job-done' : 'priority-' + job.priority.toLowerCase();
         var priorityTagClass  = job.priority === 'High' ? 'priority-urgent' : job.priority === 'Medium' ? 'priority-standard' : 'priority-minor';
 
         var cardFooterHtml;
         if (isCompleted) {
             var savedNote = job.completion_note
-                ? '<p class="completion-note-saved"><strong>Your note:</strong> ' + esc(job.completion_note) + '</p>' : '';
-            cardFooterHtml = '<div class="job-card-footer"><span class="status-badge status-completed">✓ Completed</span>' + savedNote + '</div>';
+                ? '<p class="completion-note-saved"><strong>Your note:</strong> ' + esc(job.completion_note) + '</p>'
+                : '';
+            cardFooterHtml = '<div class="job-card-footer">' +
+                '<span class="status-badge status-completed">&#10003; Completed</span>' + savedNote +
+                '</div>';
         } else {
             var inProgBtn = job.status !== 'In Progress'
-                ? '<button class="mark-in-progress-button" onclick="updateJobStatus(' + job.id + ',\'In Progress\')">Mark In Progress</button>' : '';
+                ? '<button class="mark-in-progress-button" onclick="updateJobStatus(' + job.id + ', \'In Progress\')">Mark In Progress</button>'
+                : '';
             cardFooterHtml =
                 '<div class="job-card-footer">' +
                     '<div class="completion-note-column">' +
                         '<span class="completion-note-label">Completion note (optional)</span>' +
                         '<textarea class="completion-note-input" id="completionNote-' + job.id + '" placeholder="e.g. Replaced faulty valve, tested ok."></textarea>' +
                     '</div>' +
-                    '<div class="job-action-buttons">' + inProgBtn +
-                        '<button class="mark-complete-button" onclick="updateJobStatus(' + job.id + ',\'Completed\')">Mark Complete</button>' +
+                    '<div class="job-action-buttons">' +
+                        inProgBtn +
+                        '<button class="mark-complete-button" onclick="updateJobStatus(' + job.id + ', \'Completed\')">Mark Complete</button>' +
                     '</div>' +
                 '</div>';
         }
 
         return '<div class="job-card ' + priorityCardClass + '">' +
             '<div class="job-card-top">' +
-                '<div><p class="job-card-title">' + esc(job.title) + '</p>' +
-                '<p class="job-card-ref">Request #' + job.id + ' &middot; Reported ' + reportDate + ' by ' + esc(reporterName) + '</p></div>' +
+                '<div>' +
+                    '<p class="job-card-title">' + esc(job.title) + '</p>' +
+                    '<p class="job-card-ref">Request #' + job.id + ' &middot; Reported ' + reportDate + ' by ' + esc(reporterName) + '</p>' +
+                '</div>' +
                 '<div class="job-card-badges">' +
                     '<span class="priority-tag ' + priorityTagClass + '">' + job.priority + '</span>' +
                     '<span class="' + getStatusBadgeClass(job.status) + '">' + job.status + '</span>' +
@@ -245,33 +222,25 @@ function renderJobCards(jobList) {
 function updateJobStatus(jobId, newStatus) {
     var noteEl = document.getElementById('completionNote-' + jobId);
     var note   = noteEl ? noteEl.value.trim() : '';
-    fetch(API + '/requests/' + jobId + '/status', {
-        method: 'PUT', credentials: 'include',
+
+    fetch(serverAddress + '/requests/' + jobId + '/status', {
+        method: 'PUT',
+        credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: newStatus, user_id: uid, completion_note: note })
     })
     .then(function(r) { return r.json(); })
     .then(function(data) {
         if (data.success) {
-            showJobsSuccess('Job #' + jobId + ' updated to "' + newStatus + '".' + (note ? ' Note saved.' : ''));
+            alert('Job #' + jobId + ' updated to "' + newStatus + '".' + (note ? ' Note saved.' : ''));
             loadAssignedJobs();
         } else {
-            showJobsError(data.error || 'Could not update job.');
+            alert(data.error || 'Could not update job.');
         }
     })
-    .catch(function() { showJobsError('Cannot connect to server.'); });
-}
-
-function showJobsSuccess(msg) {
-    var el = document.getElementById('jobsSuccessMessage');
-    el.textContent = msg; el.style.display = 'block';
-    document.getElementById('jobsErrorMessage').style.display = 'none';
-    setTimeout(function() { el.style.display = 'none'; }, 4000);
-}
-function showJobsError(msg) {
-    var el = document.getElementById('jobsErrorMessage');
-    el.textContent = msg; el.style.display = 'block';
-    document.getElementById('jobsSuccessMessage').style.display = 'none';
+    .catch(function() {
+        alert('Cannot connect to server.');
+    });
 }
 
 loadAssignedJobs();

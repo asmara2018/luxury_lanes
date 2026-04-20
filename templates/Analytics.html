@@ -6,6 +6,7 @@
     <title>Analytics - Luxury Lanes</title>
     <link rel="stylesheet" href="CSS Luxury Lanes.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="nav.js"></script>
 </head>
 <body>
 
@@ -22,212 +23,233 @@
     <div class="page-header">
         <h1>Performance Analytics</h1>
     </div>
-<p>Live overview of all the maintenance activity</p>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Live overview of all maintenance activity</p>
 
-    <!-- KPI tile section added in iteration 3 - modelled on dashboard summary tiles -->
-    <!-- metric-grid gives four equal columns so all four tiles sit in a single row -->
-    <div class="metric-grid">
-        <!-- Each tile has three parts: metric-label, metric-value (with unique id for JS), metric-unit -->
-        <div class="metric-tile">
-            <p class="metric-label">Avg Completion Time</p>
-            <p class="metric-value" id="kpiAvgTime">-</p>
-            <p class="metric-unit">hours</p>
+    <!-- KPI summary tiles -->
+    <section class="request-summary">
+        <div class="summary-tile">
+            <p>Total Requests</p>
+            <h2 id="kpiTotal">-</h2>
         </div>
-        <div class="metric-tile">
-            <p class="metric-label">On-Time Rate</p>
-            <!-- id given so JS can update this tile individually without affecting others -->
-            <p class="metric-value" id="kpiOnTime">-</p>
-            <p class="metric-unit">of requests</p>
+        <div class="summary-tile tile-urgent">
+            <p>High Priority</p>
+            <h2 id="kpiHigh">-</h2>
         </div>
-        <div class="metric-tile">
-            <p class="metric-label">Avg Guest Rating</p>
-            <!-- id given so JS can update this tile individually without affecting others -->
-            <p class="metric-value" id="kpiRating">-</p>
-            <p class="metric-unit">out of 5</p>
+        <div class="summary-tile tile-active">
+            <p>In Progress</p>
+            <h2 id="kpiInProg">-</h2>
         </div>
-        <div class="metric-tile">
-            <p class="metric-label">Performance Index</p>
-            <!-- id given so JS can update this tile individually without affecting others -->
-            <p class="metric-value" id="kpiIndex">-</p>
-            <p class="metric-unit">overall score</p>
+        <div class="summary-tile tile-resolved">
+            <p>Completed</p>
+            <h2 id="kpiCompleted">-</h2>
+        </div>
+    </section>
+
+    <!-- Metrics table -->
+    <div class="fault-log">
+        <h3>Key Metrics</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Metric</th>
+                    <th>Value</th>
+                </tr>
+            </thead>
+            <tbody id="analyticsTable">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Status pie chart -->
+    <div class="fault-log">
+        <h3>Request Status Overview</h3>
+        <div style="width:300px; height:250px; margin-top:8px;">
+            <canvas id="statusChart"></canvas>
         </div>
     </div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Metric</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody id="analyticsTable">
-        </tbody>
-    </table>
-<p>Request Status Overview</p>
-    <!-- sets a fixed height and width container for the chart -->
-    <div style="width:300px; height:250px; margin-top:24px;">
-        <!-- id given to statusChart so I can target it specifically using getElementById -->
-        <canvas id="statusChart"></canvas>
-        <!-- message displayed to explain what the pie chart is needed for -->
+    <!-- Priority bar chart -->
+    <div class="fault-log">
+        <h3>Priority Breakdown</h3>
+        <div style="width:350px; height:270px; margin-top:8px;">
+            <canvas id="priorityChart"></canvas>
+        </div>
     </div>
 
-    <!-- Priority bar chart added in iteration 3 -->
-    <!-- bar chart chosen over another doughnut as it makes it easier to compare categories -->
-    <!-- a manager can instantly see if high priority jobs are dominating -->
-    <p>Priority Breakdown</p>
-    <div style="width:350px; height:270px; margin-top:24px;">
-        <!-- id given to priorityChart so JS can target it specifically using getElementById -->
-        <canvas id="priorityChart"></canvas>
+    <!-- Top rooms with most issues -->
+    <div class="fault-log">
+        <h3>Top Rooms by Issue Count</h3>
+        <table>
+            <thead>
+                <tr><th>Room</th><th>Issue Count</th></tr>
+            </thead>
+            <tbody id="topRoomsTable">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Staff performance -->
+    <div class="fault-log">
+        <h3>Staff Performance</h3>
+        <table>
+            <thead>
+                <tr><th>Name</th><th>Role</th><th>Total Assigned</th><th>Completed</th><th>Active</th></tr>
+            </thead>
+            <tbody id="staffTable">
+            </tbody>
+        </table>
     </div>
 
 </main>
 
 <script>
-    var serverAddress = 'http://127.0.0.1:5000';
-    var currentUserId = localStorage.getItem('user_id');
-    var currentRole   = localStorage.getItem('role');
+var serverAddress = 'http://127.0.0.1:5000';
+var currentUserId = localStorage.getItem('user_id');
+var currentRole   = localStorage.getItem('role');
 
-    if (!currentUserId) { window.location.href = 'Login.html'; }
-    if (currentRole !== 'Manager') { window.location.href = 'Dashboard.html'; }
+// redirect if not logged in
+if (!currentUserId) {
+    window.location.href = 'Login.html';
+}
 
-    var nav = document.getElementById('navLinks');
-    nav.innerHTML += "<a href='Dashboard.html'>Dashboard</a>";
-    nav.innerHTML += "<a href='ReportFault.html'>Report Fault</a>";
-    nav.innerHTML += "<a href='AssignJob.html'>Assign Jobs</a>";
-    nav.innerHTML += "<a href='Analytics.html' class='current'>Analytics</a>";
-    nav.innerHTML += "<a href='Notifications.html'>Notifications</a>";
-    nav.innerHTML += "<a href='Feedback.html'>Feedback</a>";
+// only Managers can access this page
+if (currentRole !== 'Manager') {
+    alert('Access denied. This page is for managers only.');
+    window.location.href = 'Dashboard.html';
+}
 
-    function loadAnalytics() {
-        fetch(serverAddress + '/analytics?user_id=' + currentUserId)
-        .then(function(response) { return response.json(); })
-        .then(function(data) {
-            var tbody = document.getElementById('analyticsTable');
-            tbody.innerHTML = '';
+function buildNav() {
+        // nav.js provides the master link list
+        buildNavFromJS('Analytics.html');
+    }
 
-            var tr1 = document.createElement('tr');
-            tr1.innerHTML = '<td>Average Completion Time</td><td>' + (data.average_time || '-') + '</td>';
-            tbody.appendChild(tr1);
+buildNav();
 
-            var tr2 = document.createElement('tr');
-            tr2.innerHTML = '<td>Median Completion Time</td><td>' + (data.median_time || '-') + '</td>';
-            tbody.appendChild(tr2);
+function logout() {
+    fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
+    localStorage.removeItem('user_id');
+    localStorage.removeItem('role');
+    localStorage.removeItem('name');
+}
 
-            var tr3 = document.createElement('tr');
-            tr3.innerHTML = '<td>On-Time Rate</td><td>' + (data.on_time_rate || '-') + '</td>';
-            tbody.appendChild(tr3);
+function loadAnalytics() {
+    fetch(serverAddress + '/analytics?user_id=' + currentUserId, { credentials: 'include' })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
 
-            var tr4 = document.createElement('tr');
-            tr4.innerHTML = '<td>Repeat Issue Rate</td><td>' + (data.repeat_rate || '-') + '</td>';
-            tbody.appendChild(tr4);
+        // populate the four summary tiles
+        // FIX: correct total uses separate variable, not broken operator-precedence expression
+        var totalRequests  = (data.reported || 0) + (data.in_progress || 0) + (data.completed || 0);
+        var completedCount = data.completed || 0;
+        var avgRating      = data.avg_rating || 0;
 
-            var tr5 = document.createElement('tr');
-            tr5.innerHTML = '<td>SLA Breach Count</td><td>' + (data.sla_breaches || '-') + '</td>';
-            tbody.appendChild(tr5);
+        document.getElementById('kpiTotal').textContent    = totalRequests;
+        document.getElementById('kpiHigh').textContent     = data.high || 0;
+        document.getElementById('kpiInProg').textContent   = data.in_progress || 0;
+        document.getElementById('kpiCompleted').textContent = data.completed || 0;
 
-            var tr6 = document.createElement('tr');
-            tr6.innerHTML = '<td>Escalation Rate</td><td>' + (data.escalation_rate || '-') + '</td>';
-            tbody.appendChild(tr6);
+        // performance index:
+        // completion rate weighted 60%, average rating weighted 40%
+        // rating divided by 5 to normalise to 0-1 before converting to percentage
+        var perfIndex = '-';
+        if (totalRequests > 0) {
+            var completionRate = completedCount / totalRequests;
+            var ratingNorm     = avgRating / 5;
+            perfIndex = Math.round((completionRate * 0.6 + ratingNorm * 0.4) * 100) + '%';
+        }
 
-            var tr7 = document.createElement('tr');
-            tr7.innerHTML = '<td>Data Quality Score</td><td>' + (data.data_quality || '-') + '</td>';
-            tbody.appendChild(tr7);
+        // build the metrics table
+        var tbody = document.getElementById('analyticsTable');
+        tbody.innerHTML = '';
 
-            // Performance Index row added in iteration 3 - calculated in JS not Flask
-            // total, completed and rating use || 0 so calculation receives a number even if Flask returns null
-            var total = data.reported + data.in_progress + data.completed || 0;
-            var completed = data.completed || 0;
-            var rating = data.avg_rating || 0;
-            // total > 0 prevents division by zero when no requests exist in the database
-            var perfIndex = '-';
-            if (total > 0) {
-                // completion rate weighted at 60% - getting jobs resolved is the most important measure
-                // average rating weighted at 40% - guest satisfaction matters but should not produce zero if no feedback submitted
-                // rating divided by 5 to make it between 0 and 1 before converting to percentage
-                // Math.round produces a whole number percentage so no decimal places difficult to read for a manager
-                var completionRate = completed / total;
-                var ratingNorm = rating / 5;
-                perfIndex = Math.round((completionRate * 0.6 + ratingNorm * 0.4) * 100) + '%';
+        var rows = [
+            ['Average Completion Time',     data.average_time   !== null && data.average_time   !== undefined ? data.average_time   + ' hrs' : '-'],
+            ['Median Completion Time',       data.median_time    !== null && data.median_time    !== undefined ? data.median_time    + ' hrs' : '-'],
+            ['On-Time Rate (within 48 hrs)', data.on_time_rate   !== null && data.on_time_rate   !== undefined ? data.on_time_rate   + '%'    : '-'],
+            ['SLA Breach Count',             data.sla_breaches   !== null && data.sla_breaches   !== undefined ? data.sla_breaches             : '-'],
+            ['Escalation Rate',              data.escalation_rate !== null && data.escalation_rate !== undefined ? data.escalation_rate + '%'  : '-'],
+            ['Average Guest Rating',         data.avg_rating     !== null && data.avg_rating     !== undefined ? data.avg_rating     + ' / 5'  : '-'],
+            ['Performance Index',            perfIndex]
+        ];
+
+        for (var i = 0; i < rows.length; i++) {
+            var tr = document.createElement('tr');
+            tr.innerHTML = '<td>' + rows[i][0] + '</td><td>' + rows[i][1] + '</td>';
+            tbody.appendChild(tr);
+        }
+
+        // status pie chart
+        var canvas = document.getElementById('statusChart').getContext('2d');
+        new Chart(canvas, {
+            type: 'pie',
+            data: {
+                labels: ['Reported', 'In Progress', 'Completed'],
+                datasets: [{
+                    data: [data.reported || 0, data.in_progress || 0, data.completed || 0],
+                    backgroundColor: ['#6366f2', '#f59e0b', '#16a34a']
+                }]
+            },
+            options: {
+                plugins: { legend: { position: 'bottom' } }
             }
-            var tr8 = document.createElement('tr');
-            tr8.innerHTML = '<td>Performance Index</td><td>' + perfIndex + '</td>';
-            tbody.appendChild(tr8);
-
-            // pie chart added to give managers a visual breakdown of request status
-            var canvas = document.getElementById('statusChart').getContext('2d');
-            new Chart(canvas, {
-                type: 'pie',
-                data: {
-                    labels: ['Reported', 'In Progress', 'Completed'],
-                    datasets: [{
-                        data: [data.reported, data.in_progress, data.completed],
-                        backgroundColor: ['#6366f2', '#f59e0b', '#16a34a']
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: { position: 'bottom' }
-                    }
-                }
-            });
-
-            // KPI tiles populated in iteration 3
-            // null check used over truth check because some values could be 0
-            // a truth check would treat 0 as false and show a dash incorrectly
-            // separate getElementById calls used rather than a loop because each tile has a different format and unit
-            document.getElementById('kpiAvgTime').textContent = data.average_time !== null && data.average_time !== undefined ? data.average_time : '-';
-            // percentage symbol added in JS not in Flask response so the value stays numeric in JSON for further calculation
-            document.getElementById('kpiOnTime').textContent = data.on_time_rate !== null && data.on_time_rate !== undefined ? data.on_time_rate + '%' : '-';
-            // average guest rating retrieved from feedback table - displays dash if no feedback forms submitted
-            document.getElementById('kpiRating').textContent = data.avg_rating !== null && data.avg_rating !== undefined ? data.avg_rating : '-';
-            document.getElementById('kpiIndex').textContent = perfIndex;
-
-            // priority bar chart added in iteration 3
-            // bar chart chosen because it makes it easier to compare categories than another doughnut
-            // height of each bar represents quantity so a manager can instantly see if high priority jobs are dominating
-            var priorityCanvas = document.getElementById('priorityChart').getContext('2d');
-            new Chart(priorityCanvas, {
-                type: 'bar',
-                data: {
-                    labels: ['High', 'Medium', 'Low'],
-                    datasets: [{
-                        label: 'Requests by Priority',
-                        // bar colours match the priority tag colours used on every page of my system
-                        // allows a manager to be familiar with priority colours from view requests
-                        data: [data.high_priority || 0, data.medium_priority || 0, data.low_priority || 0],
-                        backgroundColor: ['#ef4444', '#f59e0b', '#16a34a']
-                    }]
-                },
-                options: {
-                    plugins: {
-                        legend: { display: false }
-                    },
-                    scales: {
-                        x: {
-                            grid: {
-                                // x axis grid lines hidden using display false so no background lines behind the bars
-                                display: false
-                            }
-                        },
-                        y: {
-                            beginAtZero: true
-                        }
-                    }
-                }
-            });
-        })
-        .catch(function() {
-            alert('Analytics has not loaded check if server.py is running');
         });
-    }
 
-    loadAnalytics();
+        // priority bar chart
+        // FIX: use data.high / data.medium / data.low (matching what Flask sends)
+        var priorityCanvas = document.getElementById('priorityChart').getContext('2d');
+        new Chart(priorityCanvas, {
+            type: 'bar',
+            data: {
+                labels: ['High', 'Medium', 'Low'],
+                datasets: [{
+                    label: 'Requests by Priority',
+                    data: [data.high || 0, data.medium || 0, data.low || 0],
+                    // colours match the priority tag colours used across every page
+                    backgroundColor: ['#ef4444', '#f59e0b', '#16a34a']
+                }]
+            },
+            options: {
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { grid: { display: false } },
+                    y: { beginAtZero: true }
+                }
+            }
+        });
 
-    function logout() {
-        localStorage.removeItem('user_id');
-        localStorage.removeItem('role');
-        localStorage.removeItem('name');
-    }
+        // top rooms table
+        var topRoomsBody = document.getElementById('topRoomsTable');
+        topRoomsBody.innerHTML = '';
+        if (data.top_rooms && data.top_rooms.length > 0) {
+            for (var i = 0; i < data.top_rooms.length; i++) {
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>Room ' + data.top_rooms[i].room_number + '</td><td>' + data.top_rooms[i].issue_count + '</td>';
+                topRoomsBody.appendChild(tr);
+            }
+        } else {
+            topRoomsBody.innerHTML = '<tr><td colspan="2" style="color:#9ca3af;">No data yet.</td></tr>';
+        }
+
+        // staff performance table
+        var staffBody = document.getElementById('staffTable');
+        staffBody.innerHTML = '';
+        if (data.staff_performance && data.staff_performance.length > 0) {
+            for (var i = 0; i < data.staff_performance.length; i++) {
+                var s  = data.staff_performance[i];
+                var tr = document.createElement('tr');
+                tr.innerHTML = '<td>' + s.name + '</td><td>' + s.role + '</td><td>' + (s.total || 0) + '</td><td>' + (s.done || 0) + '</td><td>' + (s.active || 0) + '</td>';
+                staffBody.appendChild(tr);
+            }
+        } else {
+            staffBody.innerHTML = '<tr><td colspan="5" style="color:#9ca3af;">No staff assigned yet.</td></tr>';
+        }
+    })
+    .catch(function() {
+        alert('Analytics could not load. Check that Server.py is running.');
+    });
+}
+
+loadAnalytics();
 </script>
 
 </body>
