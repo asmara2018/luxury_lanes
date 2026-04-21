@@ -22,7 +22,7 @@
     <div class="page-header">
         <div>
             <h1>Dashboard</h1>
-            <p>Welcome back, <span id="welcomeName"></span></p>
+            <p>Overview of all maintenance requests</p>
         </div>
     </div>
 
@@ -69,69 +69,80 @@
 <script>
 var serverAddress = 'http://127.0.0.1:5000';
 var currentUserId = localStorage.getItem('user_id');
-var currentRole   = localStorage.getItem('role');
-var currentName   = localStorage.getItem('name') || '';
 
-// redirect to login if not authenticated
+// redirect if not logged in
 if (!currentUserId) {
     window.location.href = 'Login.html';
 }
 
-document.getElementById('welcomeName').textContent = currentName;
-
-// build the sidebar links based on the user's role
+// build navigation
 function buildNav() {
-        // nav.js provides the master link list
-        buildNavFromJS('Dashboard.html');
-    }
-
+    buildNavFromJS('Dashboard.html');
+}
 buildNav();
 
+// logout
 function logout() {
     fetch(serverAddress + '/logout', { method: 'POST', credentials: 'include' });
     localStorage.clear();
 }
 
+// update dashboard counts
+function setAllCounts(total, high, inProgress, completed) {
+    document.getElementById('totalCount').textContent = total;
+    document.getElementById('highCount').textContent = high;
+    document.getElementById('inProgressCount').textContent = inProgress;
+    document.getElementById('completedCount').textContent = completed;
+}
+
+// main function
 function loadDashboard() {
     fetch(serverAddress + '/requests?user_id=' + currentUserId, { credentials: 'include' })
-    .then(function(response) { return response.json(); })
+    .then(function(response) {
+        return response.json();
+    })
     .then(function(requests) {
 
+        console.log("DEBUG DATA:", requests);
+
+        // type check
         if (!Array.isArray(requests)) {
             document.getElementById('requestTable').innerHTML =
-                '<tr><td colspan="6">Could not load requests. Please log in again.</td></tr>';
+                '<tr><td colspan="6">Error loading data</td></tr>';
+            setAllCounts(0, 0, 0, 0);
             return;
         }
 
-        var totalCount      = requests.length;
-        var highCount       = 0;
+        var totalCount = requests.length;
+        var highCount = 0;
         var inProgressCount = 0;
-        var completedCount  = 0;
+        var completedCount = 0;
 
         for (var i = 0; i < requests.length; i++) {
-            if (requests[i].priority === 'High')      highCount++;
-            if (requests[i].status === 'In Progress') inProgressCount++;
-            if (requests[i].status === 'Completed')   completedCount++;
+            var p = requests[i].priority;
+            var s = requests[i].status;
+
+            if (p && p.toLowerCase() === 'high') highCount++;
+            if (s && s.toLowerCase() === 'in progress') inProgressCount++;
+            if (s && s.toLowerCase() === 'completed') completedCount++;
         }
 
-        document.getElementById('totalCount').textContent      = totalCount;
-        document.getElementById('highCount').textContent       = highCount;
-        document.getElementById('inProgressCount').textContent = inProgressCount;
-        document.getElementById('completedCount').textContent  = completedCount;
+        setAllCounts(totalCount, highCount, inProgressCount, completedCount);
 
+        // show only latest 10
+        var display = requests.slice(0, 10);
         var rows = '';
-        // show most recent 20
-        var display = requests.slice(0, 20);
 
         for (var i = 0; i < display.length; i++) {
-            var r    = display[i];
+            var r = display[i];
             var date = r.report_time ? r.report_time.split(' ')[0] : '-';
+
             rows += '<tr>';
-            rows += '<td>#' + r.id + '</td>';
-            rows += '<td>Room ' + r.room + '</td>';
-            rows += '<td>' + r.title + '</td>';
-            rows += '<td>' + r.priority + '</td>';
-            rows += '<td>' + r.status + '</td>';
+            rows += '<td>#' + (r.id || '-') + '</td>';
+            rows += '<td>Room ' + (r.room || '-') + '</td>';
+            rows += '<td>' + (r.title || '-') + '</td>';
+            rows += '<td>' + (r.priority || '-') + '</td>';
+            rows += '<td>' + (r.status || '-') + '</td>';
             rows += '<td>' + date + '</td>';
             rows += '</tr>';
         }
@@ -142,12 +153,17 @@ function loadDashboard() {
 
         document.getElementById('requestTable').innerHTML = rows;
     })
-    .catch(function() {
+    .catch(function(error) {
+        console.error("Fetch error:", error);
+
         document.getElementById('requestTable').innerHTML =
-            '<tr><td colspan="6">Cannot connect to server. Is Server.py running?</td></tr>';
+            '<tr><td> Cannot connect to server </td></tr>';
+
+        setAllCounts(0, 0, 0, 0);
     });
 }
 
+// run dashboard
 loadDashboard();
 </script>
 

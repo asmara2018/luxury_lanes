@@ -1,70 +1,131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Login - Luxury Lanes</title>
-<link rel="stylesheet" href="CSS Luxury Lanes.css">
+    <!-- Defines the character encoding so special characters display correctly -->
+    <meta charset="UTF-8">
+
+    <!-- Makes the page scale correctly on mobile devices and different screen sizes -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Title displayed in the browser tab -->
+    <title>Login - Luxury Lanes</title>
+
+    <!-- Links the shared external CSS stylesheet so this page uses the same styling as all other pages -->
+    <link rel="stylesheet" href="CSS Luxury Lanes.css">
 </head>
+
+<!-- auth-body class centres the login card on the page using flexbox from the CSS file -->
 <body class="auth-body">
-<div class="auth-card">
-    <h1>Luxury Lanes</h1>
-    <p class="subtitle">Hotel Maintenance Management — sign in to continue</p>
-    <div id="errMsg" class="err-msg"></div>
-    <div class="form-group">
-        <label>Email Address</label>
-        <input type="email" id="email" placeholder="nathan@gmail.com" >
+
+    <!-- auth-card class applies the white rounded card container that holds the login form -->
+    <div class="auth-card">
+
+        <!-- Main heading displaying the system name to the user -->
+        <h1>Luxury Lanes</h1>
+
+        <!-- Brief subtitle explaining the purpose of the system to new users -->
+        <p class="subtitle">Hotel Maintenance System: Sign in</p>
+
+        <!-- Error message box - hidden by default, shown by JavaScript if login fails -->
+        <div id="errMsg" class="err-msg"></div>
+
+        <!-- Email input group - form-group class applies consistent spacing and label styling -->
+        <div class="form-group">
+            <label>Email Address</label>
+
+            <!-- type="email" provides built in browser format validation requiring an @ symbol -->
+            <input type="email"
+                   id="email"
+                   placeholder="e.g. nathan@gmail.com">
+        </div>
+
+        <!-- Password input group -->
+        <div class="form-group">
+            <label>Password</label>
+
+            <!-- type="password" hides the characters as the user types for security -->
+            <input type="password"
+                   id="password"
+                   placeholder="Your password">
+        </div>
+
+        <!-- Submit button - btn-primary class applies the blue styling consistent across all pages -->
+        <!-- onclick calls the login function written in the script below -->
+        <button class="btn-primary" id="loginBtn" onclick="login()">
+            Sign In
+        </button>
+
+        <!-- Link to the register page for new users who do not have an account yet -->
+        <p class="auth-link">
+            No account? <a href="Register.html">Register here</a>
+        </p>
+
     </div>
-    <div class="form-group">
-        <label>Password</label>
-        <input type="password" id="password" placeholder="Your password" >
-    </div>
-    <button class="btn-primary" id="loginBtn" onclick="login()">Sign In</button>
-    <p class="auth-link">No account? <a href="Register.html">Register here</a></p>
-</div>
+
 <script>
-var API = 'http://127.0.0.1:5000';
+    // Flask server address stored as a variable so it only needs changing in one place
+    var API = 'http://127.0.0.1:5000';
 
-function login() {
-    var email    = document.getElementById('email').value.trim();
-    var password = document.getElementById('password').value;
-    var btn      = document.getElementById('loginBtn');
-    var errEl    = document.getElementById('errMsg');
-    errEl.style.display = 'none';
+    function login() {
+        // Retrieve values entered by the user and remove any accidental whitespace
+        var email    = document.getElementById('email').value.trim();
+        var password = document.getElementById('password').value;
+        var btn      = document.getElementById('loginBtn');
+        var errEl    = document.getElementById('errMsg');
 
-    if (!email || !password) { showErr('Please enter your email and password.'); return; }
+        // Hide any previous error message before attempting a new login
+        errEl.style.display = 'none';
 
-    btn.disabled = true; btn.textContent = 'Signing in...';
-
-    fetch(API + '/login', {
-        method: 'POST',
-        credentials: 'include',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: email, password: password })
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            localStorage.setItem('user_id', data.user_id);
-            localStorage.setItem('role',    data.role);
-            localStorage.setItem('name',    data.name);
-            localStorage.setItem('email',   data.email);
-            window.location.href = 'Dashboard.html';
-        } else {
-            showErr(data.message || 'Incorrect email or password.');
-            btn.disabled = false; btn.textContent = 'Sign In';
+        // Presence check - both fields must be filled before sending to Flask
+        if (!email || !password) {
+            showErr('Please enter your email and password.');
+            return;
         }
-    })
-    .catch(function() {
-        showErr('Cannot connect to server. Make sure Server.py is running.');
-        btn.disabled = false; btn.textContent = 'Sign In';
-    });
-}
 
-function showErr(msg) {
-    var el = document.getElementById('errMsg');
-    el.textContent = msg; el.style.display = 'block';
-}
+        // Disable the button and update its text so the user knows the request is being processed
+        btn.disabled    = true;
+        btn.textContent = 'Signing in...';
+
+        // Send the login credentials to the Flask backend as a JSON object
+        fetch(API + '/login', {
+            method:      'POST',
+            credentials: 'include',
+            headers:     { 'Content-Type': 'application/json' },
+            body:        JSON.stringify({ email: email, password: password })
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                // Store the user details in localStorage so other pages can read the role and user_id
+                localStorage.setItem('user_id', data.user_id);
+                localStorage.setItem('role',    data.role);
+                localStorage.setItem('name',    data.name);
+                localStorage.setItem('email',   data.email);
+
+                // Redirect to the dashboard after a successful login
+                window.location.href = 'Dashboard.html';
+            } else {
+                // Show the error message returned from Flask if credentials are incorrect
+                showErr(data.message || 'Incorrect email or password.');
+                btn.disabled    = false;
+                btn.textContent = 'Sign In';
+            }
+        })
+        .catch(function() {
+            // Handles the case where Flask is not running
+            showErr('Cannot connect to server. Make sure Server.py is running.');
+            btn.disabled    = false;
+            btn.textContent = 'Sign In';
+        });
+    }
+
+    // Helper function to display an error message in the red error box
+    function showErr(msg) {
+        var el          = document.getElementById('errMsg');
+        el.textContent  = msg;
+        el.style.display = 'block';
+    }
 </script>
+
 </body>
 </html>

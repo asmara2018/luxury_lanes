@@ -110,7 +110,7 @@ function submitFault() {
     }
 
     btn.disabled = true;
-    btn.textContent = 'Submitting...';
+    btn.textContent = 'Submitted';
 
     fetch(serverAddress + '/report-fault', {
         method: 'POST',

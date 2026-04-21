@@ -23,7 +23,6 @@
     <div class="page-header">
         <h1>Performance Analytics</h1>
     </div>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:20px;">Live overview of all maintenance activity</p>
 
     <!-- KPI summary tiles -->
     <section class="request-summary">
@@ -55,15 +54,14 @@
                     <th>Value</th>
                 </tr>
             </thead>
-            <tbody id="analyticsTable">
-            </tbody>
+            <tbody id="analyticsTable"></tbody>
         </table>
     </div>
 
     <!-- Status pie chart -->
     <div class="fault-log">
         <h3>Request Status Overview</h3>
-        <div style="width:300px; height:250px; margin-top:8px;">
+        <div style="width:300px; height:250px;">
             <canvas id="statusChart"></canvas>
         </div>
     </div>
@@ -71,20 +69,22 @@
     <!-- Priority bar chart -->
     <div class="fault-log">
         <h3>Priority Breakdown</h3>
-        <div style="width:350px; height:270px; margin-top:8px;">
+        <div style="width:350px; height:270px;">
             <canvas id="priorityChart"></canvas>
         </div>
     </div>
 
-    <!-- Top rooms with most issues -->
+    <!-- Top rooms -->
     <div class="fault-log">
         <h3>Top Rooms by Issue Count</h3>
         <table>
             <thead>
-                <tr><th>Room</th><th>Issue Count</th></tr>
+                <tr>
+                    <th>Room</th>
+                    <th>Issue Count</th>
+                </tr>
             </thead>
-            <tbody id="topRoomsTable">
-            </tbody>
+            <tbody id="topRoomsTable"></tbody>
         </table>
     </div>
 
@@ -93,10 +93,15 @@
         <h3>Staff Performance</h3>
         <table>
             <thead>
-                <tr><th>Name</th><th>Role</th><th>Total Assigned</th><th>Completed</th><th>Active</th></tr>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Total Assigned</th>
+                    <th>Completed</th>
+                    <th>Active</th>
+                </tr>
             </thead>
-            <tbody id="staffTable">
-            </tbody>
+            <tbody id="staffTable"></tbody>
         </table>
     </div>
 
@@ -107,22 +112,21 @@ var serverAddress = 'http://127.0.0.1:5000';
 var currentUserId = localStorage.getItem('user_id');
 var currentRole   = localStorage.getItem('role');
 
-// redirect if not logged in
+var statusChartInstance = null;
+var priorityChartInstance = null;
+
 if (!currentUserId) {
     window.location.href = 'Login.html';
 }
 
-// only Managers can access this page
 if (currentRole !== 'Manager') {
     alert('Access denied. This page is for managers only.');
     window.location.href = 'Dashboard.html';
 }
 
 function buildNav() {
-        // nav.js provides the master link list
-        buildNavFromJS('Analytics.html');
-    }
-
+    buildNavFromJS('Analytics.html');
+}
 buildNav();
 
 function logout() {
@@ -133,43 +137,38 @@ function logout() {
 }
 
 function loadAnalytics() {
-    fetch(serverAddress + '/analytics?user_id=' + currentUserId, { credentials: 'include' })
+    fetch(serverAddress + '/analytics', { credentials: 'include' })
     .then(function(response) { return response.json(); })
     .then(function(data) {
 
-        // populate the four summary tiles
-        // FIX: correct total uses separate variable, not broken operator-precedence expression
-        var totalRequests  = (data.reported || 0) + (data.in_progress || 0) + (data.completed || 0);
-        var completedCount = data.completed || 0;
-        var avgRating      = data.avg_rating || 0;
+        var reported  = data.reported || 0;
+        var inProg    = data.in_progress || 0;
+        var completed = data.completed || 0;
+        var total     = reported + inProg + completed;
 
-        document.getElementById('kpiTotal').textContent    = totalRequests;
-        document.getElementById('kpiHigh').textContent     = data.high || 0;
-        document.getElementById('kpiInProg').textContent   = data.in_progress || 0;
-        document.getElementById('kpiCompleted').textContent = data.completed || 0;
+        document.getElementById('kpiTotal').textContent     = total;
+        document.getElementById('kpiHigh').textContent      = data.high || 0;
+        document.getElementById('kpiInProg').textContent    = inProg;
+        document.getElementById('kpiCompleted').textContent = completed;
 
-        // performance index:
-        // completion rate weighted 60%, average rating weighted 40%
-        // rating divided by 5 to normalise to 0-1 before converting to percentage
         var perfIndex = '-';
-        if (totalRequests > 0) {
-            var completionRate = completedCount / totalRequests;
-            var ratingNorm     = avgRating / 5;
+        if (total > 0) {
+            var completionRate = completed / total;
+            var ratingNorm     = (data.avg_rating || 0) / 5;
             perfIndex = Math.round((completionRate * 0.6 + ratingNorm * 0.4) * 100) + '%';
         }
 
-        // build the metrics table
         var tbody = document.getElementById('analyticsTable');
         tbody.innerHTML = '';
 
         var rows = [
-            ['Average Completion Time',     data.average_time   !== null && data.average_time   !== undefined ? data.average_time   + ' hrs' : '-'],
-            ['Median Completion Time',       data.median_time    !== null && data.median_time    !== undefined ? data.median_time    + ' hrs' : '-'],
-            ['On-Time Rate (within 48 hrs)', data.on_time_rate   !== null && data.on_time_rate   !== undefined ? data.on_time_rate   + '%'    : '-'],
-            ['SLA Breach Count',             data.sla_breaches   !== null && data.sla_breaches   !== undefined ? data.sla_breaches             : '-'],
-            ['Escalation Rate',              data.escalation_rate !== null && data.escalation_rate !== undefined ? data.escalation_rate + '%'  : '-'],
-            ['Average Guest Rating',         data.avg_rating     !== null && data.avg_rating     !== undefined ? data.avg_rating     + ' / 5'  : '-'],
-            ['Performance Index',            perfIndex]
+            ['Average Completion Time', data.average_time ? data.average_time + ' hrs' : '-'],
+            ['Median Completion Time', data.median_time ? data.median_time + ' hrs' : '-'],
+            ['On-Time Rate (within 48 hrs)', data.on_time_rate ? data.on_time_rate + '%' : '-'],
+            ['SLA Breach Count', data.sla_breaches != null ? data.sla_breaches : '-'],
+            ['Escalation Rate', data.escalation_rate ? data.escalation_rate + '%' : '-'],
+            ['Average Guest Rating', data.avg_rating ? data.avg_rating + ' / 5' : '-'],
+            ['Performance Index', perfIndex]
         ];
 
         for (var i = 0; i < rows.length; i++) {
@@ -178,14 +177,16 @@ function loadAnalytics() {
             tbody.appendChild(tr);
         }
 
-        // status pie chart
-        var canvas = document.getElementById('statusChart').getContext('2d');
-        new Chart(canvas, {
+        if (statusChartInstance) statusChartInstance.destroy();
+        if (priorityChartInstance) priorityChartInstance.destroy();
+
+        var statusCtx = document.getElementById('statusChart').getContext('2d');
+        statusChartInstance = new Chart(statusCtx, {
             type: 'pie',
             data: {
                 labels: ['Reported', 'In Progress', 'Completed'],
                 datasets: [{
-                    data: [data.reported || 0, data.in_progress || 0, data.completed || 0],
+                    data: [reported, inProg, completed],
                     backgroundColor: ['#6366f2', '#f59e0b', '#16a34a']
                 }]
             },
@@ -194,62 +195,63 @@ function loadAnalytics() {
             }
         });
 
-        // priority bar chart
-        // FIX: use data.high / data.medium / data.low (matching what Flask sends)
-        var priorityCanvas = document.getElementById('priorityChart').getContext('2d');
-        new Chart(priorityCanvas, {
+        var priorityCtx = document.getElementById('priorityChart').getContext('2d');
+        priorityChartInstance = new Chart(priorityCtx, {
             type: 'bar',
             data: {
                 labels: ['High', 'Medium', 'Low'],
                 datasets: [{
-                    label: 'Requests by Priority',
                     data: [data.high || 0, data.medium || 0, data.low || 0],
-                    // colours match the priority tag colours used across every page
                     backgroundColor: ['#ef4444', '#f59e0b', '#16a34a']
                 }]
             },
             options: {
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { grid: { display: false } },
                     y: { beginAtZero: true }
                 }
             }
         });
 
-        // top rooms table
-        var topRoomsBody = document.getElementById('topRoomsTable');
-        topRoomsBody.innerHTML = '';
+        var roomsBody = document.getElementById('topRoomsTable');
+        roomsBody.innerHTML = '';
+
         if (data.top_rooms && data.top_rooms.length > 0) {
             for (var i = 0; i < data.top_rooms.length; i++) {
                 var tr = document.createElement('tr');
                 tr.innerHTML = '<td>Room ' + data.top_rooms[i].room_number + '</td><td>' + data.top_rooms[i].issue_count + '</td>';
-                topRoomsBody.appendChild(tr);
+                roomsBody.appendChild(tr);
             }
         } else {
-            topRoomsBody.innerHTML = '<tr><td colspan="2" style="color:#9ca3af;">No data yet.</td></tr>';
+            roomsBody.innerHTML = '<tr><td colspan="2">No data yet</td></tr>';
         }
 
-        // staff performance table
         var staffBody = document.getElementById('staffTable');
         staffBody.innerHTML = '';
+
         if (data.staff_performance && data.staff_performance.length > 0) {
             for (var i = 0; i < data.staff_performance.length; i++) {
-                var s  = data.staff_performance[i];
+                var s = data.staff_performance[i];
                 var tr = document.createElement('tr');
-                tr.innerHTML = '<td>' + s.name + '</td><td>' + s.role + '</td><td>' + (s.total || 0) + '</td><td>' + (s.done || 0) + '</td><td>' + (s.active || 0) + '</td>';
+                tr.innerHTML =
+                    '<td>' + s.name + '</td>' +
+                    '<td>' + s.role + '</td>' +
+                    '<td>' + (s.total || 0) + '</td>' +
+                    '<td>' + (s.done || 0) + '</td>' +
+                    '<td>' + (s.active || 0) + '</td>';
                 staffBody.appendChild(tr);
             }
         } else {
-            staffBody.innerHTML = '<tr><td colspan="5" style="color:#9ca3af;">No staff assigned yet.</td></tr>';
+            staffBody.innerHTML = '<tr><td colspan="5">No staff assigned</td></tr>';
         }
+
     })
     .catch(function() {
         alert('Analytics could not load. Check that Server.py is running.');
     });
 }
 
-loadAnalytics();
+document.addEventListener('DOMContentLoaded', loadAnalytics);
 </script>
 
 </body>
